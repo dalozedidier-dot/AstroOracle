@@ -1,0 +1,40 @@
+name: demo-visuals
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    env:
+      MPLBACKEND: Agg
+      ASTROORACLE_OFFLINE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install -U pip
+          pip install -e ".[dev]"
+
+      - name: Generate sample candidates
+        run: |
+          python examples/sample_candidates.py
+
+      - name: Generate demo visuals (HTML + PNG)
+        run: |
+          rm -rf demo_out
+          astrooracle batch-html --candidates candidates.parquet --out-dir demo_out --n-query 12 --offline
+
+      - name: Upload demo artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo_out
+          path: demo_out
