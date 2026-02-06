@@ -1,4 +1,5 @@
-name: batch-html
+name: AstroOracle Batch HTML
+
 on:
   workflow_dispatch:
     inputs:
@@ -6,8 +7,6 @@ on:
         description: "Nombre de candidats"
         required: false
         default: "60"
-  schedule:
-    - cron: "0 */6 * * *"
 
 jobs:
   build-batch:
@@ -25,14 +24,12 @@ jobs:
           pip install -e ".[plotly]"
 
       - name: Generate batch HTML
-        env:
-          NQ: ${{ inputs.n_query || '60' }}
         run: |
           if [ ! -f candidates.parquet ]; then
-            echo "candidates.parquet introuvable"
+            echo "candidates.parquet introuvable à la racine du repo"
             exit 1
           fi
-          astrooracle batch-html --candidates candidates.parquet --out-dir batch_out --n-query "$NQ"
+          astrooracle batch-html --candidates candidates.parquet --out-dir batch_out --n-query "${{ inputs.n_query }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
