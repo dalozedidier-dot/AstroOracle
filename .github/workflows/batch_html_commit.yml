@@ -4,9 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       n_query:
-        description: "Nombre de candidats"
+        description: "Nombre de candidats a inclure dans le batch"
         required: false
         default: "60"
+      branch:
+        description: "Branche de publication du batch"
+        required: false
+        default: "batch-out"
+  schedule:
+    - cron: "0 */6 * * *"
 
 permissions:
   contents: write
@@ -14,12 +20,16 @@ permissions:
 jobs:
   build-and-commit:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: true
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
@@ -29,25 +39,41 @@ jobs:
           python -m pip install -U pip
           pip install -e ".[plotly]"
 
-      - name: Generate batch HTML
+      - name: Ensure candidates.parquet exists
         run: |
           if [ ! -f candidates.parquet ]; then
-            echo "candidates.parquet introuvable à la racine"
-            exit 1
+            echo "candidates.parquet absent, generation de test via examples/sample_candidates.py"
+            python examples/sample_candidates.py
+          else
+            echo "candidates.parquet present, utilisation du fichier existant"
           fi
-          astrooracle batch-html --candidates candidates.parquet --out-dir batch_out --n-query "${{ inputs.n_query }}"
+          ls -la candidates.parquet
 
-      - name: Commit to batch-out branch
+      - name: Generate batch HTML
         run: |
-          BRANCH="batch-out"
+          astrooracle batch-html \
+            --candidates candidates.parquet \
+            --out-dir batch_out \
+            --n-query "${{ inputs.n_query }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: astrooracle_batch_out
+          path: batch_out
+
+      - name: Commit batch to branch
+        run: |
+          BRANCH="${{ inputs.branch }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git checkout -B "$BRANCH"
+
           rm -rf docs/batch_out
           mkdir -p docs
           mv batch_out docs/batch_out
 
           git add docs/batch_out
-          git commit -m "batch: update batch_out" || echo "Nothing to commit"
+          git commit -m "batch: update docs/batch_out" || echo "Nothing to commit"
           git push -f origin "$BRANCH"
