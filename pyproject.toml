@@ -8,20 +8,8 @@ version = "0.1.0"
 description = "AstroOracle: active learning oracle for astronomical anomaly triage (SkyView cutouts + annotations + retrain hooks)."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
-authors = [{ name = "AstroOracle Contributors" }]
-keywords = ["astronomy", "anomaly-detection", "active-learning", "skyview", "astropy"]
-classifiers = [
-  "Development Status :: 3 - Alpha",
-  "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: MIT License",
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Topic :: Scientific/Engineering :: Astronomy",
-]
+license = {text = "MIT"}
+authors = [{name="AstroOracle Contributors"}]
 dependencies = [
   "numpy>=1.23",
   "pandas>=2.0",
@@ -33,10 +21,6 @@ dependencies = [
   "pillow>=10.0",
 ]
 
-[project.urls]
-Homepage = "https://github.com/<OWNER>/AstroOracle"
-Issues = "https://github.com/<OWNER>/AstroOracle/issues"
-
 [project.optional-dependencies]
 notebook = [
   "ipywidgets>=8.1",
@@ -45,70 +29,24 @@ notebook = [
 ]
 plotly = ["plotly>=5.18"]
 watch = ["watchdog>=3.0"]
-
-# A single extra that makes CI/dev reproducible.
-# Pins are intentionally bounded to avoid surprise breakage in CI.
 dev = [
-  "pytest>=8,<10",
-  "pytest-cov>=5,<8",
-  "coverage[toml]>=7,<8",
-  "ruff>=0.6,<1.0",
-  "black>=24,<27",
-  "pre-commit>=3.7,<5",
-  "mypy>=1.10,<2",
-  "types-requests>=2.32.0.20240914",
-  "build>=1.2,<2",
-  "twine>=5,<7",
-  "nox>=2024.4.15",
+  "pytest>=7.4",
+  "ruff>=0.3",
+  "black>=24.1",
 ]
-
 
 [project.scripts]
 astrooracle = "astrooracle.cli:main"
 
 [tool.setuptools]
-package-dir = { "" = "src" }
+package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[tool.setuptools.package-data]
-astrooracle = ["py.typed"]
-
-[tool.pytest.ini_options]
-minversion = "8.0"
-addopts = "-q --disable-warnings --maxfail=1 --cov=astrooracle --cov-report=term-missing"
-testpaths = ["tests"]
-
-[tool.coverage.run]
-branch = true
-source = ["astrooracle"]
-
-[tool.coverage.report]
-fail_under = 0
-show_missing = true
-skip_covered = false
-
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-src = ["src"]
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
-ignore = ["E501"]  # black handles line-length
 
 [tool.black]
 line-length = 100
-target-version = ["py310"]
-
-[tool.mypy]
-python_version = "3.10"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = false
-no_implicit_optional = true
-check_untyped_defs = true
-strict_equality = true
-ignore_missing_imports = true
-mypy_path = "src"
