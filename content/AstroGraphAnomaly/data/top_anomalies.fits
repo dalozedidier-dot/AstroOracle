@@ -1,0 +1,71 @@
+import os
+import numpy as np
+
+# Essaie de récupérer la table d'anomalies depuis l'espace courant
+tbl = None
+
+# 1) si tu as une Astropy Table en variable (souvent anoms)
+if "anoms" in globals():
+    tbl = anoms
+
+# 2) si tu as un DataFrame (df_anoms), on le convertit
+if tbl is None and "df_anoms" in globals():
+    from astropy.table import Table
+    tbl = Table.from_pandas(df_anoms)
+
+# 3) sinon, tente de charger un CSV d'anomalies si présent
+if tbl is None:
+    candidates = [
+        "anomalies.csv",
+        "anoms.csv",
+        "top_anomalies.csv",
+        "results/anomalies.csv",
+        "data/anomalies.csv",
+        "_ci_out/anomalies.csv",
+    ]
+    csv_path = next((p for p in candidates if os.path.exists(p)), None)
+    if csv_path is None:
+        raise FileNotFoundError(
+            "Je ne trouve ni variable `anoms`/`df_anoms`, ni CSV anomalies dans les chemins standards."
+        )
+    import pandas as pd
+    from astropy.table import Table
+    df = pd.read_csv(csv_path)
+    tbl = Table.from_pandas(df)
+
+print("Table anomalies: lignes =", len(tbl))
+print("Colonnes:", tbl.colnames)
+
+# --- Trouver automatiquement la colonne score ---
+score_candidates = [
+    "score", "anomaly_score", "anomaly", "z", "zscore", "z_score",
+    "outlier_score", "lof", "iforest_score", "iso_score"
+]
+score_col = next((c for c in score_candidates if c in tbl.colnames), None)
+if score_col is None:
+    # fallback: prend une colonne numérique "qui ressemble" à un score
+    numeric_cols = []
+    for c in tbl.colnames:
+        try:
+            _ = np.asarray(tbl[c], dtype=float)
+            numeric_cols.append(c)
+        except Exception:
+            pass
+    if not numeric_cols:
+        raise ValueError("Aucune colonne numérique détectée pour trier les anomalies.")
+    # heuristic: privilégie une colonne contenant 'score' ou 'anom'
+    preferred = [c for c in numeric_cols if ("score" in c.lower() or "anom" in c.lower() or "z" in c.lower())]
+    score_col = preferred[0] if preferred else numeric_cols[0]
+
+print("Colonne score utilisée:", score_col)
+
+# --- Sélectionner le TOP N (ajuste N si besoin) ---
+TOP_N = 200
+# Beaucoup de scores: plus grand = plus anormal. Si chez toi c'est l'inverse, dis-moi, je l'inverse.
+order = np.argsort(np.asarray(tbl[score_col], dtype=float))[::-1]
+top = tbl[order[:min(TOP_N, len(tbl))]]
+
+# --- Écrire le FITS ---
+out_path = "top_anomalies.fits"
+top.write(out_path, overwrite=True)
+print("OK ->", out_path, "(", len(top), "lignes )")
