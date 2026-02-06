@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import hashlib
 import json
+import hashlib
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 from .config import OracleConfig
 
@@ -23,7 +23,7 @@ def get_file_hash(path: Path) -> str:
     return h.hexdigest()[:12]
 
 
-def log_event(cfg: OracleConfig, event: dict[str, Any]) -> None:
+def log_event(cfg: OracleConfig, event: Dict[str, Any]) -> None:
     payload = {
         **event,
         "timestamp": utcnow_iso(),

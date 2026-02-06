@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
-from typing import Any
+from typing import Callable, Any, Dict, List
 
 import numpy as np
 import pandas as pd
 
 try:
     import ipywidgets as w
-    from IPython.display import clear_output, display
+    from IPython.display import display, clear_output
 except Exception:  # pragma: no cover
     w = None  # type: ignore
     display = None  # type: ignore
@@ -34,12 +33,10 @@ class OracleUI:
         select_candidates_fn: Callable[[pd.DataFrame, OracleConfig], pd.DataFrame],
         fetch_cutouts_fn: Callable[[float, float, OracleConfig], Any],
         render_fn: Callable[[Any, str], None],
-        append_annotations_fn: Callable[[OracleConfig, list[dict[str, Any]]], None],
+        append_annotations_fn: Callable[[OracleConfig, List[Dict[str, Any]]], None],
     ):
         if w is None:
-            raise RuntimeError(
-                "ipywidgets not installed. Install extras: pip install -e '.[notebook]'"
-            )
+            raise RuntimeError("ipywidgets not installed. Install extras: pip install -e '.[notebook]'")
 
         self.cfg = cfg
         self.load_candidates = load_candidates_fn
@@ -52,9 +49,7 @@ class OracleUI:
         self.idx = 0
 
         self.title = w.HTML("")
-        self.comment = w.Textarea(
-            description="Commentaire", layout=w.Layout(width="100%", height="80px")
-        )
+        self.comment = w.Textarea(description="Commentaire", layout=w.Layout(width="100%", height="80px"))
         self.next_btn = w.Button(description="Next")
         self.reload_btn = w.Button(description="Reload candidates", button_style="info")
         self.out = w.Output()
@@ -68,7 +63,7 @@ class OracleUI:
         self.next_btn.on_click(lambda _: self.on_next())
         self.reload_btn.on_click(lambda _: self.on_reload())
 
-        controls = w.HBox([*self.label_buttons, self.next_btn, self.reload_btn])
+        controls = w.HBox(self.label_buttons + [self.next_btn, self.reload_btn])
         display(w.VBox([self.title, self.comment, controls, self.out]))
 
         self.on_reload()
@@ -111,7 +106,7 @@ class OracleUI:
             return
 
         row = self.batch.iloc[self.idx]
-        entry: dict[str, Any] = {
+        entry: Dict[str, Any] = {
             "id": row["id"],
             "ra": float(row["ra"]),
             "dec": float(row["dec"]),

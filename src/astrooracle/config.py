@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import List, Optional
 
 from astropy import units as u
 
@@ -15,15 +16,16 @@ class OracleConfig:
     model_path: Path
     min_new_labels_for_retrain: int
     check_interval_s: int
-    surveys: list[str]
+    surveys: List[str]
     cutout_radius: u.Quantity
     pixels: int
     n_query: int
     no_gui: bool
-    save_cutouts_dir: Path | None
+    save_cutouts_dir: Optional[Path]
+    offline: bool
 
     @staticmethod
-    def default() -> OracleConfig:
+    def default() -> "OracleConfig":
         return OracleConfig(
             candidates_path=Path("candidates.parquet"),
             annot_path=Path("annotations.csv"),
@@ -38,4 +40,5 @@ class OracleConfig:
             n_query=6,
             no_gui=False,
             save_cutouts_dir=None,
+            offline=False,
         )

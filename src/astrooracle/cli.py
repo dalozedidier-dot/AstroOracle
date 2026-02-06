@@ -9,23 +9,19 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .annotations import append_annotations, count_labels, get_retrain_cursor, set_retrain_cursor
-from .batch_html import generate_batch_html
 from .config import OracleConfig
-from .core import fetch_cutouts, load_candidates, select_candidates
-from .logging_utils import log_event
+from .core import load_candidates, select_candidates, fetch_cutouts
 from .viz_matplotlib import render_cutouts_matplotlib
+from .annotations import append_annotations, count_labels, get_retrain_cursor, set_retrain_cursor
+from .logging_utils import log_event
 from .watch import watch_candidates
+from .batch_html import generate_batch_html
 
 
 def _make_cfg(args: argparse.Namespace) -> OracleConfig:
     cfg0 = OracleConfig.default()
     save_dir = Path(args.save_cutouts) if args.save_cutouts else None
-    cutout_radius = (
-        cfg0.cutout_radius
-        if args.cutout_radius_arcmin is None
-        else (float(args.cutout_radius_arcmin) * cfg0.cutout_radius.unit)
-    )
+    cutout_radius = cfg0.cutout_radius if args.cutout_radius_arcmin is None else (float(args.cutout_radius_arcmin) * cfg0.cutout_radius.unit)
     return OracleConfig(
         candidates_path=Path(args.candidates),
         annot_path=Path(args.annotations),
@@ -40,6 +36,7 @@ def _make_cfg(args: argparse.Namespace) -> OracleConfig:
         n_query=int(args.n_query),
         no_gui=bool(args.no_gui),
         save_cutouts_dir=save_dir,
+        offline=bool(args.offline),
     )
 
 
@@ -49,9 +46,7 @@ def maybe_retrain(cfg: OracleConfig) -> None:
     new_since = total - cursor
     if new_since >= cfg.min_new_labels_for_retrain:
         print(f"Retrain triggered: {new_since} new labels.")
-        log_event(
-            cfg, {"event": "retrain_triggered", "new_labels": new_since, "total_labels": total}
-        )
+        log_event(cfg, {"event": "retrain_triggered", "new_labels": new_since, "total_labels": total})
         try:
             subprocess.run(["python", str(cfg.retrain_script)], check=True)
             set_retrain_cursor(cfg, total)
@@ -85,11 +80,7 @@ def annotate_batch(cfg: OracleConfig, top: pd.DataFrame) -> None:
         render_cutouts_matplotlib(cutouts, title, cfg, save_path=save_path)
 
         while True:
-            choice = (
-                input("Label ? [r]éel [a]rtefact [c]onnu [j]junk/nouveau [s]kip -> ")
-                .strip()
-                .lower()
-            )
+            choice = input("Label ? [r]éel [a]rtefact [c]onnu [j]junk/nouveau [s]kip -> ").strip().lower()
             if choice in {"r", "a", "c", "j", "s"}:
                 break
 
@@ -197,6 +188,7 @@ def main() -> None:
         sp.add_argument("--survey", action="append", default=["DSS2 Red", "2MASS J"])
         sp.add_argument("--no-gui", action="store_true")
         sp.add_argument("--save-cutouts", default=None)
+        sp.add_argument("--offline", action="store_true", help="Use synthetic cutouts (no network).")
 
     sp_run = sub.add_parser("run", help="Poll candidates file and annotate in CLI.")
     add_common(sp_run)

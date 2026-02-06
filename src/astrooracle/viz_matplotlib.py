@@ -1,19 +1,20 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import List, Optional, Tuple
 
-import matplotlib.pyplot as plt
 import numpy as np
-from astropy.visualization import ImageNormalize, ZScaleInterval
+import matplotlib.pyplot as plt
+from astropy.visualization import ZScaleInterval, ImageNormalize
 
 from .config import OracleConfig
 
 
 def render_cutouts_matplotlib(
-    cutouts: list[tuple[str, np.ndarray]],
+    cutouts: List[Tuple[str, np.ndarray]],
     title: str,
     cfg: OracleConfig,
-    save_path: Path | None = None,
+    save_path: Optional[Path] = None,
 ) -> None:
     if not cutouts:
         print("No cutouts available.")
@@ -24,7 +25,7 @@ def render_cutouts_matplotlib(
     if n == 1:
         axes = [axes]
 
-    for ax, (survey, data) in zip(axes, cutouts, strict=False):
+    for ax, (survey, data) in zip(axes, cutouts):
         norm = ImageNormalize(data, interval=ZScaleInterval())
         ax.imshow(data, cmap="gray", norm=norm, origin="lower")
         ax.set_title(survey, fontsize=9)

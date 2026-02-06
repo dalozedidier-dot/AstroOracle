@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import List, Tuple
+
 import numpy as np
 
 try:
@@ -8,7 +10,7 @@ except Exception:  # pragma: no cover
     px = None  # type: ignore
 
 
-def render_cutouts_plotly(cutouts: list[tuple[str, np.ndarray]], title: str) -> None:
+def render_cutouts_plotly(cutouts: List[Tuple[str, np.ndarray]], title: str) -> None:
     if px is None:
         raise RuntimeError("Plotly not installed. Install extras: pip install -e '.[plotly]'")
     for survey, data in cutouts:

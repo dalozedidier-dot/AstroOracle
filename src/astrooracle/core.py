@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from typing import List, Tuple
+
+import os
+import hashlib
+
 import numpy as np
 import pandas as pd
 from astropy import units as u
@@ -7,8 +12,8 @@ from astropy.coordinates import SkyCoord
 from astroquery.skyview import SkyView
 from sklearn.metrics import pairwise_distances
 
-from .annotations import read_annotations
 from .config import OracleConfig
+from .annotations import read_annotations
 
 REQUIRED_CAND_COLS = {"id", "ra", "dec", "anomaly_score"}
 
@@ -48,9 +53,33 @@ def select_candidates(df: pd.DataFrame, cfg: OracleConfig) -> pd.DataFrame:
     return df.nlargest(cfg.n_query, "query_score").reset_index(drop=True)
 
 
-def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> list[tuple[str, np.ndarray]]:
+def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tuple[str, np.ndarray]]:
+    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {"1", "true", "yes"}
+    results: List[Tuple[str, np.ndarray]] = []
+
+    if offline:
+        # Deterministic synthetic cutouts for CI/offline demos.
+        # Generates a smooth Gaussian blob + noise, seeded by (ra, dec, survey).
+        for survey in cfg.surveys:
+            key = f"{ra_deg:.6f}|{dec_deg:.6f}|{survey}"
+            seed = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
+            rng = np.random.default_rng(seed)
+
+            n = int(cfg.pixels)
+            yy, xx = np.mgrid[0:n, 0:n]
+            cx = rng.uniform(0.35 * n, 0.65 * n)
+            cy = rng.uniform(0.35 * n, 0.65 * n)
+            sx = rng.uniform(0.06 * n, 0.12 * n)
+            sy = rng.uniform(0.06 * n, 0.12 * n)
+
+            blob = np.exp(-(((xx - cx) ** 2) / (2 * sx**2) + ((yy - cy) ** 2) / (2 * sy**2)))
+            noise = rng.normal(0, 0.05, size=(n, n))
+            bg = rng.normal(0, 0.01, size=(n, n))
+            img = (0.8 * blob + noise + bg).astype(float)
+            results.append((survey, img))
+        return results
+
     coord = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg)
-    results: list[tuple[str, np.ndarray]] = []
     for survey in cfg.surveys:
         try:
             images = SkyView.get_images(

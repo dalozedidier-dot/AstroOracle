@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,7 @@ import pandas as pd
 from .config import OracleConfig
 
 
-def append_annotations(cfg: OracleConfig, rows: list[dict[str, Any]]) -> None:
+def append_annotations(cfg: OracleConfig, rows: List[Dict[str, Any]]) -> None:
     if not rows:
         return
     df_new = pd.DataFrame(rows)
@@ -23,7 +23,6 @@ def read_annotations(cfg: OracleConfig) -> pd.DataFrame:
         return pd.DataFrame()
     df = pd.read_csv(cfg.annot_path)
     if "embedding" in df.columns and not df.empty:
-
         def _loads(x):
             if pd.isna(x):
                 return None
@@ -33,7 +32,6 @@ def read_annotations(cfg: OracleConfig) -> pd.DataFrame:
                 except Exception:
                     return None
             return None
-
         df["embedding_vec"] = df["embedding"].map(_loads)
     return df
 

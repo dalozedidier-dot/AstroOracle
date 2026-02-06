@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
 from pathlib import Path
+from typing import Callable
 
 try:
-    from watchdog.events import FileSystemEventHandler
     from watchdog.observers import Observer
+    from watchdog.events import FileSystemEventHandler
 except Exception:  # pragma: no cover
     Observer = None  # type: ignore
     FileSystemEventHandler = object  # type: ignore

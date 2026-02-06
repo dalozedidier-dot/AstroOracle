@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import json
 import re
+import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
@@ -38,7 +38,7 @@ def generate_batch_html(cfg: OracleConfig, candidates_df: pd.DataFrame, out_dir:
     cut_dir = out_dir / "cutouts"
     cut_dir.mkdir(exist_ok=True)
 
-    recs: list[dict[str, Any]] = []
+    recs: List[Dict[str, Any]] = []
     for _, r in candidates_df.iterrows():
         ra = float(r["ra"])
         dec = float(r["dec"])
@@ -52,13 +52,7 @@ def generate_batch_html(cfg: OracleConfig, candidates_df: pd.DataFrame, out_dir:
             _save_png(data, png)
 
         recs.append(
-            {
-                "id": str(cid),
-                "ra": ra,
-                "dec": dec,
-                "score": float(r["anomaly_score"]),
-                "surveys": surveys,
-            }
+            {"id": str(cid), "ra": ra, "dec": dec, "score": float(r["anomaly_score"]), "surveys": surveys}
         )
 
     (out_dir / "candidates.json").write_text(json.dumps(recs, indent=2), encoding="utf-8")
