@@ -75,3 +75,22 @@ astrooracle batch-html --candidates candidates.parquet --out-dir demo_out --n-qu
 ```
 
 Open `demo_out/index.html`.
+
+
+## Nouveautés v0.2.0
+
+- Ranking multicritère (anomaly score + acquisition + prior + diversité)
+- Acquisition: entropy, margin, BALD (via ensemble), BADGE
+- Diversité batch: k-center (core-set) et DPP greedy
+- Entraînement: modèle ensemble logistic regression calibré + métriques (ECE)
+- API: FastAPI (endpoints /rank, /annotate)
+- Stats: DuckDB sur logs JSONL
+
+### Commandes
+
+```bash
+astrooracle train --candidates candidates.parquet --annotations annotations.csv
+astrooracle batch-html --out-dir out_html
+astrooracle serve --host 127.0.0.1 --port 8000
+astrooracle stats
+```
