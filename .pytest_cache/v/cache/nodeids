@@ -1,0 +1,4 @@
+[
+  "tests/test_ranking.py::test_rank_and_select_runs",
+  "tests/test_select.py::test_select_candidates_basic"
+]
