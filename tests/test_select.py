@@ -14,4 +14,4 @@ def test_select_candidates_basic():
     })
     top = select_candidates(df, cfg)
     assert len(top) == 5
-    assert "query_score" in top.columns
+    assert "rank_score" in top.columns
