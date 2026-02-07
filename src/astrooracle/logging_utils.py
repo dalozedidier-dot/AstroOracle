@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from .config import OracleConfig
 
@@ -23,12 +23,22 @@ def get_file_hash(path: Path) -> str:
     return h.hexdigest()[:12]
 
 
-def log_event(cfg: OracleConfig, event: Dict[str, Any]) -> None:
+def log_event(
+    cfg: OracleConfig,
+    event: Dict[str, Any],
+    *,
+    session_id: Optional[str] = None,
+    annotator_id: Optional[str] = None,
+) -> None:
     payload = {
         **event,
         "timestamp": utcnow_iso(),
+        "session_id": session_id,
+        "annotator_id": annotator_id,
         "model_version": get_file_hash(cfg.model_path),
         "candidates_hash": get_file_hash(cfg.candidates_path),
+        "acquisition": cfg.ranking.strategy,
+        "diversity": cfg.ranking.diversity,
     }
     cfg.log_path.parent.mkdir(parents=True, exist_ok=True)
     with cfg.log_path.open("a", encoding="utf-8") as f:

@@ -4,7 +4,28 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
-from astropy import units as u
+
+@dataclass(frozen=True)
+class RankingConfig:
+    strategy: str
+    diversity: str
+    w_anomaly: float
+    w_acq: float
+    w_div: float
+    w_prior: float
+    acq_temperature: float
+
+    @staticmethod
+    def default() -> "RankingConfig":
+        return RankingConfig(
+            strategy="entropy",
+            diversity="kcenter",
+            w_anomaly=0.35,
+            w_acq=0.35,
+            w_div=0.20,
+            w_prior=0.10,
+            acq_temperature=1.0,
+        )
 
 
 @dataclass(frozen=True)
@@ -16,13 +37,17 @@ class OracleConfig:
     model_path: Path
     min_new_labels_for_retrain: int
     check_interval_s: int
+
     surveys: List[str]
-    cutout_radius: u.Quantity
+    cutout_radius_arcmin: float
     pixels: int
+
     n_query: int
     no_gui: bool
     save_cutouts_dir: Optional[Path]
     offline: bool
+
+    ranking: RankingConfig
 
     @staticmethod
     def default() -> "OracleConfig":
@@ -35,10 +60,11 @@ class OracleConfig:
             min_new_labels_for_retrain=10,
             check_interval_s=300,
             surveys=["DSS2 Red", "2MASS J"],
-            cutout_radius=0.15 * u.arcmin,
+            cutout_radius_arcmin=0.15,
             pixels=400,
             n_query=6,
             no_gui=False,
             save_cutouts_dir=None,
             offline=False,
+            ranking=RankingConfig.default(),
         )

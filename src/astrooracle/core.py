@@ -7,13 +7,10 @@ import hashlib
 
 import numpy as np
 import pandas as pd
-from astropy import units as u
-from astropy.coordinates import SkyCoord
-from astroquery.skyview import SkyView
-from sklearn.metrics import pairwise_distances
 
 from .config import OracleConfig
-from .annotations import read_annotations
+from .model_io import load_model
+from .ranking import rank_candidates, select_batch
 
 REQUIRED_CAND_COLS = {"id", "ra", "dec", "anomaly_score"}
 
@@ -29,28 +26,9 @@ def load_candidates(cfg: OracleConfig) -> pd.DataFrame:
 
 
 def select_candidates(df: pd.DataFrame, cfg: OracleConfig) -> pd.DataFrame:
-    df = df.copy()
-    median_score = float(df["anomaly_score"].median())
-    df["unc"] = np.abs(df["anomaly_score"] - median_score)
-
-    diversity = np.ones(len(df), dtype=float)
-    if "embedding" in df.columns and cfg.annot_path.exists():
-        annot = read_annotations(cfg)
-        if not annot.empty and "embedding_vec" in annot.columns:
-            ann_vecs = [v for v in annot["embedding_vec"].tolist() if isinstance(v, np.ndarray)]
-            if ann_vecs:
-                emb_all = np.stack(df["embedding"].values)
-                emb_ann = np.stack(ann_vecs)
-                dists = pairwise_distances(emb_all, emb_ann, metric="cosine")
-                diversity = dists.min(axis=1)
-                denom = (diversity.max() - diversity.min()) + 1e-8
-                diversity = (diversity - diversity.min()) / denom
-
-    unc_norm = df["unc"].to_numpy(dtype=float)
-    unc_norm = unc_norm / (float(unc_norm.max()) + 1e-8)
-
-    df["query_score"] = 0.6 * unc_norm + 0.4 * diversity
-    return df.nlargest(cfg.n_query, "query_score").reset_index(drop=True)
+    model = load_model(cfg.model_path)
+    ranked, _ = rank_candidates(df, cfg, model=model)
+    return select_batch(ranked, cfg, k=cfg.n_query)
 
 
 def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tuple[str, np.ndarray]]:
@@ -58,8 +36,6 @@ def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tupl
     results: List[Tuple[str, np.ndarray]] = []
 
     if offline:
-        # Deterministic synthetic cutouts for CI/offline demos.
-        # Generates a smooth Gaussian blob + noise, seeded by (ra, dec, survey).
         for survey in cfg.surveys:
             key = f"{ra_deg:.6f}|{dec_deg:.6f}|{survey}"
             seed = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
@@ -79,6 +55,10 @@ def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tupl
             results.append((survey, img))
         return results
 
+    from astropy import units as u
+    from astropy.coordinates import SkyCoord
+    from astroquery.skyview import SkyView
+
     coord = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg)
     for survey in cfg.surveys:
         try:
@@ -86,7 +66,7 @@ def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tupl
                 position=coord,
                 survey=[survey],
                 pixels=cfg.pixels,
-                radius=cfg.cutout_radius,
+                radius=cfg.cutout_radius_arcmin * u.arcmin,
             )
             if not images:
                 continue
