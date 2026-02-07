@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-# Stub retrain script.
-# Replace with your real training pipeline.
-# Expected side-effect: write/update best_model.pkl (or adjust --model-path).
+from __future__ import annotations
 
-from pathlib import Path
-import pickle
+from astrooracle.config import OracleConfig
+from astrooracle.train import train_from_files
 
-MODEL_PATH = Path("best_model.pkl")
 
-def main():
-    model = {"model": "stub", "note": "replace scripts/retrain_model.py with your real retrain."}
-    MODEL_PATH.write_bytes(pickle.dumps(model))
-    print(f"Wrote stub model to {MODEL_PATH}")
+def main() -> None:
+    cfg = OracleConfig.default()
+    metrics = train_from_files(cfg)
+    print("Model trained.")
+    print(f"Saved: {cfg.model_path}")
+    print(f"Metrics: {cfg.model_path.with_suffix('.metrics.json')}")
+    print(f"ECE: {metrics.get('ece')}")
+
 
 if __name__ == "__main__":
     main()
