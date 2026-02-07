@@ -11,3 +11,33 @@ annotations.csv
 oracle_log.jsonl
 best_model.pkl
 *.parquet
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+.env
+
+# Packaging
+build/
+dist/
+*.egg-info/
+
+# Test/coverage
+.coverage
+htmlcov/
+.coverage.*
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Runtime outputs
+_ci_out/
+*.parquet
+*.pkl
+oracle_log.jsonl
