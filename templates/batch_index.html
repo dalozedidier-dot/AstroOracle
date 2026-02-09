@@ -26,6 +26,8 @@
 <div id="root"></div>
 
 <script>
+const EMBEDDED_CANDIDATES = null; // __CANDIDATES_JSON__
+
 const LABELS = [
   ["real_anomaly", "Réel"],
   ["artefact", "Artefact"],
@@ -135,11 +137,23 @@ function clearAll(){
   }
 }
 
+async function loadCandidates(){
+  if(Array.isArray(EMBEDDED_CANDIDATES)){
+    return EMBEDDED_CANDIDATES;
+  }
+  try{
+    const resp = await fetch("candidates.json");
+    return await resp.json();
+  }catch(e){
+    setStatus("failed to load candidates.json (open via http:// ?)");
+    return [];
+  }
+}
+
 async function render(){
   const root = document.getElementById("root");
   root.innerHTML = "";
-  const resp = await fetch("candidates.json");
-  const cs = await resp.json();
+  const cs = await loadCandidates();
   cs.forEach(c => root.appendChild(renderCard(c)));
 }
 render();

@@ -64,7 +64,10 @@ def generate_batch_html(cfg: OracleConfig, candidates_df: pd.DataFrame, out_dir:
     (out_dir / "candidates.json").write_text(json.dumps(recs, indent=2), encoding="utf-8")
 
     template = Path(__file__).resolve().parents[2] / "templates" / "batch_index.html"
-    (out_dir / "index.html").write_text(
-        template.read_text(encoding="utf-8"),
-        encoding="utf-8",
+    html = template.read_text(encoding="utf-8")
+    embedded = json.dumps(recs, ensure_ascii=False)
+    html = html.replace(
+        "const EMBEDDED_CANDIDATES = null; // __CANDIDATES_JSON__",
+        f"const EMBEDDED_CANDIDATES = {embedded};",
     )
+    (out_dir / "index.html").write_text(html, encoding="utf-8")

@@ -1,0 +1,159 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>AstroOracle batch</title>
+  <style>
+    body { font-family: sans-serif; margin: 16px; }
+    .card { border: 1px solid #ddd; padding: 12px; margin: 12px 0; border-radius: 8px; }
+    .imgs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    img { max-width: 360px; height: auto; border: 1px solid #eee; border-radius: 6px; }
+    .btns button { margin-right: 8px; margin-top: 8px; }
+    textarea { width: 100%; height: 60px; margin-top: 8px; }
+    #status { margin-left: 10px; color: #444; }
+  </style>
+</head>
+<body>
+<h1>AstroOracle batch</h1>
+
+<div>
+  <button onclick="exportJSON()">Export JSON</button>
+  <button onclick="exportCSV()">Export CSV</button>
+  <button onclick="clearAll()">Clear saved labels</button>
+  <span id="status"></span>
+</div>
+
+<div id="root"></div>
+
+<script id="candidates-data" type="application/json">
+[{"id": "cand_0021", "ra": 88.8489628641445, "dec": -7.974368403904389, "score": -1.0321105159591508, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0034", "ra": 151.66037090309771, "dec": 5.866137623298208, "score": 0.2989357851819998, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0031", "ra": 246.70840446949677, "dec": 28.558975223106245, "score": 0.7674896483637392, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0032", "ra": 320.2603254328796, "dec": 13.807417465959468, "score": 0.47310880233050817, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0041", "ra": 165.44395577530977, "dec": 18.40167895568976, "score": -0.5611065807563974, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0022", "ra": 60.77789134030984, "dec": 25.15676835037455, "score": -1.3129902867052863, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0020", "ra": 44.41235417750295, "dec": 20.984980858191896, "score": -0.18396784247805253, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0000", "ra": 187.30698267668086, "dec": 26.702341561948273, "score": -0.013864461607308259, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0004", "ra": 45.82722525437969, "dec": -29.877914556229335, "score": 0.7190236842850324, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0026", "ra": 155.98564191990317, "dec": -1.0332405848289383, "score": 0.0073291088593590735, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0038", "ra": 250.96722006553605, "dec": -3.5302907104523484, "score": -1.3982340271476477, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0027", "ra": 311.68478947214953, "dec": -9.188485443543037, "score": 1.1116427811613367, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0009", "ra": 356.9669575554348, "dec": 4.211238167277735, "score": 0.8080001193790939, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0005", "ra": 125.8314728902044, "dec": -20.64719485607755, "score": -0.7287182263916533, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0010", "ra": 105.20541612295783, "dec": 5.788927752483474, "score": 0.34847614527112997, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0011", "ra": 95.3931328617574, "dec": -15.028779996335292, "score": -0.8824087147336893, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0033", "ra": 282.5435868607818, "dec": 0.04295774334492819, "score": -1.3576619603269457, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0037", "ra": 215.39478740988454, "dec": 23.29160332307398, "score": 0.47267814632899924, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0046", "ra": 194.02894504580934, "dec": 23.085655441997353, "score": -0.09906992113086294, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0023", "ra": 354.483566143348, "dec": 28.099730488222832, "score": -0.29397512517177565, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0030", "ra": 79.22792690397006, "dec": 2.5976360079493475, "score": 0.4825347820492177, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0039", "ra": 356.13202142354356, "dec": -9.834280677610675, "score": -0.7765451490127318, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0045", "ra": 229.52325758178736, "dec": 4.730080242233932, "score": 0.8696667424197085, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0047", "ra": 118.35961450648831, "dec": -18.39573953431914, "score": -1.7329364778776526, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0036", "ra": 196.29278719020328, "dec": -2.3962691610539935, "score": 0.35532492715130304, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0017", "ra": 354.0681939681767, "dec": 18.873218174697904, "score": -0.1923523328011551, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0025", "ra": 41.29433392337026, "dec": 10.223921194740853, "score": 2.5356888977480825, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0018", "ra": 14.179785102636227, "dec": 18.640295637322595, "score": -0.9201781978998773, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0001", "ra": 104.51592315128875, "dec": -4.889726850667682, "score": -1.8254054809767934, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0024", "ra": 183.24315407787827, "dec": -4.113815858839779, "score": -0.734077867850802, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0003", "ra": 73.8970328455593, "dec": 11.770331544922684, "score": -1.1386683714895531, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0043", "ra": 99.71657988993613, "dec": -12.253455466093229, "score": 0.3697184362538499, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0028", "ra": 103.14428865788813, "dec": 11.804632390439231, "score": 1.2996036553713495, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0013", "ra": 146.38265332621478, "dec": 13.546678612253459, "score": 0.30706016399074876, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0007", "ra": 314.54064125853364, "dec": 9.90159385728738, "score": -0.4169661679781836, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0040", "ra": 237.14048989217054, "dec": -24.695298739076854, "score": -0.1482834506033749, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0049", "ra": 171.36019121562353, "dec": -3.6676466737217623, "score": -0.28534680387790456, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0019", "ra": 84.4737485299374, "dec": 10.746932751479306, "score": 0.16681030621075926, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0015", "ra": 276.27280227095247, "dec": 27.815901178611284, "score": -0.8196214389708899, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0048", "ra": 33.12307630099853, "dec": -6.321399972052141, "score": 0.86977295553606, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0035", "ra": 198.67285337352482, "dec": -4.25334489209812, "score": 1.182948237521097, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0002", "ra": 245.63629183382932, "dec": 4.936671033498634, "score": 1.2510364573135517, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0014", "ra": 352.7191637006522, "dec": -2.983745129455194, "score": 1.3560707558168799, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0029", "ra": 183.5605403266903, "dec": -14.415291792920844, "score": 2.204655266582759, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0042", "ra": 231.3210448739767, "dec": 14.770109049895566, "score": -1.1230913885849565, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0044", "ra": 144.07273784359342, "dec": -26.88555094937599, "score": 0.794410757528647, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0016", "ra": 191.31524503865202, "dec": -10.103530548258547, "score": -0.6386465083158176, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0012", "ra": 227.46334572322155, "dec": -16.644117673290083, "score": 0.660015823797344, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0008", "ra": 52.22958140966289, "dec": 10.730436841113345, "score": -0.5436663378190432, "surveys": ["DSS2 Red", "2MASS J"]}, {"id": "cand_0006", "ra": 176.1096559884461, "dec": -12.040772372809677, "score": 0.9028630254216441, "surveys": ["DSS2 Red", "2MASS J"]}]
+</script>
+
+<script>
+const LABELS = [
+  ["real_anomaly", "Réel"],
+  ["artefact", "Artefact"],
+  ["known", "Connu"],
+  ["new_type", "Nouveau type"],
+  ["skip", "Skip"]
+];
+
+let annotations = JSON.parse(localStorage.getItem("astrooracle_annotations") || "{}");
+
+function setStatus(msg){ document.getElementById("status").textContent = " " + msg; }
+
+function save(){
+  localStorage.setItem("astrooracle_annotations", JSON.stringify(annotations));
+  setStatus("saved");
+}
+
+function slug(s){ return String(s).replace(/[^a-zA-Z0-9_-]/g, "_"); }
+
+function renderCard(c){
+  const id = c.id;
+  const key = String(id);
+  const a = annotations[key] || { label: "", comment: "" };
+
+  const div = document.createElement("div");
+  div.className = "card";
+
+  const h = document.createElement("div");
+  h.innerHTML = "<b>ID:</b> " + id + " | <b>score:</b> " + c.score.toFixed(4) +
+                " | <b>RA:</b> " + c.ra.toFixed(5) + " <b>Dec:</b> " + c.dec.toFixed(5);
+  div.appendChild(h);
+
+  const imgs = document.createElement("div");
+  imgs.className = "imgs";
+
+  (c.surveys || []).forEach(s => {
+    const im = document.createElement("img");
+    im.src = "cutouts/" + slug(id) + "_" + slug(s) + ".png";
+    im.alt = s;
+    imgs.appendChild(im);
+  });
+  div.appendChild(imgs);
+
+  const btns = document.createElement("div");
+  btns.className = "btns";
+  LABELS.forEach(([lab, txt]) => {
+    const b = document.createElement("button");
+    b.textContent = txt;
+    b.onclick = () => {
+      annotations[key] = annotations[key] || {};
+      annotations[key].label = lab;
+      annotations[key].ra = c.ra;
+      annotations[key].dec = c.dec;
+      annotations[key].anomaly_score = c.score;
+      annotations[key].id = id;
+      annotations[key].annotated_at = new Date().toISOString();
+      save();
+      render();
+    };
+    btns.appendChild(b);
+  });
+  div.appendChild(btns);
+
+  const ta = document.createElement("textarea");
+  ta.placeholder = "Commentaire";
+  ta.value = a.comment || "";
+  ta.onchange = () => {
+    annotations[key] = annotations[key] || {};
+    annotations[key].comment = ta.value;
+    save();
+  };
+  div.appendChild(ta);
+
+  const s = document.createElement("div");
+  s.textContent = "Label actuel: " + (a.label || "(vide)");
+  div.appendChild(s);
+
+  return div;
+}
+
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(annotations, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "annotations.json";
+  a.click();
+}
+
+function exportCSV(){
+  const rows = Object.values(annotations);
+  const header = ["id","ra","dec","anomaly_score","label","comment","annotated_at"];
+  const csv = [header.join(",")].concat(rows.map(r =>
+    header.map(k => JSON.stringify((r && (k in r)) ? r[k] : "")).join(",")
+  )).join("\n");
+  const blob = new Blob([csv], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "annotations.csv";
+  a.click();
+}
+
+function clearAll(){
+  if(confirm("Supprimer toutes les annotations sauvegardées (localStorage) ?")){
+    annotations = {};
+    save();
+    render();
+  }
+}
+
+async function render(){
+  const root = document.getElementById("root");
+  root.innerHTML = "";
+  const embedded = document.getElementById("candidates-data");
+  let cs = null;
+  if (embedded && embedded.textContent.trim().length){
+    try { cs = JSON.parse(embedded.textContent); } catch(e) { cs = null; }
+  }
+  if (!cs){
+    const resp = await fetch("candidates.json");
+    cs = await resp.json();
+  }
+  cs.forEach(c => root.appendChild(renderCard(c)));
+}
+render();
+</script>
+</body>
+</html>
