@@ -10,7 +10,6 @@ try:
 except Exception:  # pragma: no cover
     IsolationForest = None  # type: ignore[assignment]
 
-
 from .acquisition import acquire, AcquisitionResult
 from .config import OracleConfig
 from .diversity import dpp_greedy, kcenter_greedy
@@ -27,7 +26,6 @@ def _normalize(x: np.ndarray, eps: float = 1e-12) -> np.ndarray:
     if not np.isfinite(lo) or not np.isfinite(hi) or (hi - lo) < eps:
         return np.zeros_like(x)
     return (x - lo) / (hi - lo + eps)
-
 
 def prior_score(df: pd.DataFrame) -> np.ndarray:
     s = np.zeros(len(df), dtype=float)
@@ -46,8 +44,6 @@ def prior_score(df: pd.DataFrame) -> np.ndarray:
         s += _normalize(-mag)
 
     return _normalize(s)
-
-
 
 def artifact_score(df: pd.DataFrame) -> np.ndarray:
     # Higher = more artefact-like (heuristic)
@@ -69,7 +65,6 @@ def artifact_score(df: pd.DataFrame) -> np.ndarray:
     raw = _normalize(spike) + _normalize(1.0 - np.clip(circ, 0.0, 1.0)) + _normalize(-snr)
     return _normalize(raw)
 
-
 def known_score(df: pd.DataFrame) -> np.ndarray:
     n = len(df)
     if n == 0:
@@ -83,7 +78,6 @@ def known_score(df: pd.DataFrame) -> np.ndarray:
 
     raw = np.maximum(flag("gaia_match"), flag("simbad_match"))
     return _normalize(raw)
-
 
 def iforest_score(X: np.ndarray, seed: int = 7) -> np.ndarray:
     if IsolationForest is None:
@@ -102,7 +96,6 @@ def _heuristic_acquisition(df: pd.DataFrame) -> AcquisitionResult:
     med = float(pd.to_numeric(df["anomaly_score"], errors="coerce").median())
     unc = np.abs(df["anomaly_score"].to_numpy(float) - med)
     return AcquisitionResult(score=unc, components={"median_distance": unc})
-
 
 def rank_candidates(
     df: pd.DataFrame,
@@ -173,7 +166,6 @@ def rank_candidates(
 
     metrics = {"n": int(n), "strategy": cfg.ranking.strategy, "diversity": cfg.ranking.diversity}
     return df.sort_values("rank_score", ascending=False).reset_index(drop=True), metrics
-
 
 def select_batch(ranked: pd.DataFrame, cfg: OracleConfig, k: int) -> pd.DataFrame:
     if ranked.empty:

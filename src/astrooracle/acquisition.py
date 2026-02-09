@@ -27,9 +27,9 @@ def bald_mc(probs_mc: np.ndarray, eps: float = 1e-12) -> np.ndarray:
     # probs_mc: [T, N, C]
     p_bar = probs_mc.mean(axis=0)
     h_bar = entropy(p_bar, eps=eps)
-    h_each = np.array(
-        [entropy(probs_mc[t], eps=eps) for t in range(probs_mc.shape[0])]
-    ).mean(axis=0)
+    h_each = np.array([entropy(probs_mc[t], eps=eps) for t in range(probs_mc.shape[0])]).mean(
+        axis=0
+    )
     return h_bar - h_each
 
 

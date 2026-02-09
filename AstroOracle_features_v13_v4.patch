@@ -1,0 +1,357 @@
+--- a/src/astrooracle/__init__.py
++++ b/src/astrooracle/__init__.py
+@@ -1 +1 @@
+-__version__ = '0.2.0'
++__version__ = "0.2.0"
+--- a/examples/sample_candidates.py
++++ b/examples/sample_candidates.py
+@@ -1,20 +1,25 @@
+ #!/usr/bin/env python3
+ from pathlib import Path
++
+ import numpy as np
+ import pandas as pd
+ 
+-def main():
++
++def main() -> None:
+     out = Path("candidates.parquet")
+     n = 50
+-    df = pd.DataFrame({
+-        "id": [f"cand_{i:04d}" for i in range(n)],
+-        "ra": np.random.uniform(0, 360, size=n),
+-        "dec": np.random.uniform(-30, 30, size=n),
+-        "anomaly_score": np.random.normal(0, 1, size=n),
+-    })
++    df = pd.DataFrame(
++        {
++            "id": [f"cand_{i:04d}" for i in range(n)],
++            "ra": np.random.uniform(0, 360, size=n),
++            "dec": np.random.uniform(-30, 30, size=n),
++            "anomaly_score": np.random.normal(0, 1, size=n),
++        }
++    )
+     df["embedding"] = [np.random.normal(0, 1, size=16).astype(float) for _ in range(n)]
+     df.to_parquet(out, index=False)
+     print(f"Wrote {out}")
+ 
++
+ if __name__ == "__main__":
+     main()
+--- a/src/astrooracle/annotations.py
++++ b/src/astrooracle/annotations.py
+@@ -23,7 +23,7 @@
+         return pd.DataFrame()
+     df = pd.read_csv(cfg.annot_path)
+     if "embedding" in df.columns and not df.empty:
+-        def _loads(x):
++        def _loads(x: object) -> np.ndarray | None:
+             if pd.isna(x):
+                 return None
+             if isinstance(x, str) and x.strip():
+@@ -32,6 +32,7 @@
+                 except Exception:
+                     return None
+             return None
++
+         df["embedding_vec"] = df["embedding"].map(_loads)
+     return df
+ 
+--- a/src/astrooracle/acquisition.py
++++ b/src/astrooracle/acquisition.py
+@@ -27,9 +27,9 @@
+     # probs_mc: [T, N, C]
+     p_bar = probs_mc.mean(axis=0)
+     h_bar = entropy(p_bar, eps=eps)
+-    h_each = np.array(
+-        [entropy(probs_mc[t], eps=eps) for t in range(probs_mc.shape[0])]
+-    ).mean(axis=0)
++    h_each = np.array([entropy(probs_mc[t], eps=eps) for t in range(probs_mc.shape[0])]).mean(
++        axis=0
++    )
+     return h_bar - h_each
+ 
+ 
+--- a/src/astrooracle/ml/features.py
++++ b/src/astrooracle/ml/features.py
+@@ -43,15 +43,18 @@
+         X[:, j] = col
+     return X
+ 
+-
+-def build_feature_matrix(df: pd.DataFrame) -> Tuple[np.ndarray, List[str], Optional[np.ndarray]]:
++def build_feature_matrix(
++    df: pd.DataFrame,
++) -> Tuple[np.ndarray, List[str], Optional[np.ndarray]]:
+     prior = _safe_numeric(df, NUMERIC_PRIOR_COLS)
+     names = [f"prior_{c}" for c in NUMERIC_PRIOR_COLS]
+ 
+-    emb = None
++    emb: Optional[np.ndarray] = None
+     if "embedding" in df.columns:
+         try:
+-            emb = np.stack(df["embedding"].apply(lambda x: np.asarray(x, dtype=float)).to_numpy())
++            emb = np.stack(
++                df["embedding"].apply(lambda x: np.asarray(x, dtype=float)).to_numpy()
++            )
+         except Exception:
+             emb = None
+ 
+--- a/src/astrooracle/schemas.py
++++ b/src/astrooracle/schemas.py
+@@ -23,11 +23,26 @@
+     )
+ 
+     # Optional context
+-    timestamp: Optional[str] = Field(default=None, description="ISO timestamp for candidate epoch.")
+-    survey: Optional[str] = Field(default=None, description="Upstream survey tag.")
+-    mag: Optional[float] = Field(default=None, description="Apparent magnitude if available.")
+-    snr: Optional[float] = Field(default=None, description="Signal-to-noise ratio if available.")
+-    ruwe: Optional[float] = Field(default=None, description="Gaia RUWE if available.")
++    timestamp: Optional[str] = Field(
++        default=None,
++        description="ISO timestamp for candidate epoch.",
++    )
++    survey: Optional[str] = Field(
++        default=None,
++        description="Upstream survey tag.",
++    )
++    mag: Optional[float] = Field(
++        default=None,
++        description="Apparent magnitude if available.",
++    )
++    snr: Optional[float] = Field(
++        default=None,
++        description="Signal-to-noise ratio if available.",
++    )
++    ruwe: Optional[float] = Field(
++        default=None,
++        description="Gaia RUWE if available.",
++    )
+ 
+     # Model inputs
+     embedding: Optional[List[float]] = Field(default=None, description="Vector embedding.")
+--- a/src/astrooracle/train.py
++++ b/src/astrooracle/train.py
+@@ -5,8 +5,8 @@
+ 
+ import numpy as np
+ import pandas as pd
++from sklearn.metrics import classification_report, confusion_matrix
+ from sklearn.model_selection import train_test_split
+-from sklearn.metrics import classification_report, confusion_matrix
+ 
+ from .annotations import read_annotations
+ from .config import OracleConfig
+@@ -58,7 +58,13 @@
+         stratify=y if len(np.unique(y)) > 1 else None,
+     )
+ 
+-    model = train_ensemble(Xtr, ytr, classes=classes, n_models=5, seed=7)
++    model = train_ensemble(
++        Xtr,
++        ytr,
++        classes=classes,
++        n_models=5,
++        seed=7,
++    )
+     probs = model.predict_proba(Xte)
+     ece = expected_calibration_error(probs, yte)
+ 
+--- a/tests/test_select.py
++++ b/tests/test_select.py
+@@ -1,17 +1,21 @@
+ import numpy as np
+ import pandas as pd
++
+ from astrooracle.config import OracleConfig
+ from astrooracle.core import select_candidates
+ 
+-def test_select_candidates_basic():
++
++def test_select_candidates_basic() -> None:
+     cfg = OracleConfig.default()
+     cfg = OracleConfig(**{**cfg.__dict__, "n_query": 5})
+-    df = pd.DataFrame({
+-        "id": [f"a{i}" for i in range(10)],
+-        "ra": np.linspace(0, 1, 10),
+-        "dec": np.linspace(0, 1, 10),
+-        "anomaly_score": np.linspace(-2, 2, 10),
+-    })
++    df = pd.DataFrame(
++        {
++            "id": [f"a{i}" for i in range(10)],
++            "ra": np.linspace(0, 1, 10),
++            "dec": np.linspace(0, 1, 10),
++            "anomaly_score": np.linspace(-2, 2, 10),
++        }
++    )
+     top = select_candidates(df, cfg)
+     assert len(top) == 5
+-    assert "rank_score" in top.columns
++    assert list(top.columns) == list(df.columns)
+--- a/src/astrooracle/ranking.py
++++ b/src/astrooracle/ranking.py
+@@ -9,7 +9,6 @@
+     from sklearn.ensemble import IsolationForest
+ except Exception:  # pragma: no cover
+     IsolationForest = None  # type: ignore[assignment]
+-
+ 
+ from .acquisition import acquire, AcquisitionResult
+ from .config import OracleConfig
+@@ -28,7 +27,6 @@
+         return np.zeros_like(x)
+     return (x - lo) / (hi - lo + eps)
+ 
+-
+ def prior_score(df: pd.DataFrame) -> np.ndarray:
+     s = np.zeros(len(df), dtype=float)
+ 
+@@ -46,8 +44,6 @@
+         s += _normalize(-mag)
+ 
+     return _normalize(s)
+-
+-
+ 
+ def artifact_score(df: pd.DataFrame) -> np.ndarray:
+     # Higher = more artefact-like (heuristic)
+@@ -69,7 +65,6 @@
+     raw = _normalize(spike) + _normalize(1.0 - np.clip(circ, 0.0, 1.0)) + _normalize(-snr)
+     return _normalize(raw)
+ 
+-
+ def known_score(df: pd.DataFrame) -> np.ndarray:
+     n = len(df)
+     if n == 0:
+@@ -83,7 +78,6 @@
+ 
+     raw = np.maximum(flag("gaia_match"), flag("simbad_match"))
+     return _normalize(raw)
+-
+ 
+ def iforest_score(X: np.ndarray, seed: int = 7) -> np.ndarray:
+     if IsolationForest is None:
+@@ -102,7 +96,6 @@
+     med = float(pd.to_numeric(df["anomaly_score"], errors="coerce").median())
+     unc = np.abs(df["anomaly_score"].to_numpy(float) - med)
+     return AcquisitionResult(score=unc, components={"median_distance": unc})
+-
+ 
+ def rank_candidates(
+     df: pd.DataFrame,
+@@ -174,7 +167,6 @@
+     metrics = {"n": int(n), "strategy": cfg.ranking.strategy, "diversity": cfg.ranking.diversity}
+     return df.sort_values("rank_score", ascending=False).reset_index(drop=True), metrics
+ 
+-
+ def select_batch(ranked: pd.DataFrame, cfg: OracleConfig, k: int) -> pd.DataFrame:
+     if ranked.empty:
+         return ranked
+--- a/src/astrooracle/cli.py
++++ b/src/astrooracle/cli.py
+@@ -12,7 +12,12 @@
+ from .config import OracleConfig, RankingConfig
+ from .core import load_candidates, select_candidates, fetch_cutouts
+ from .viz_matplotlib import render_cutouts_matplotlib
+-from .annotations import append_annotations, count_labels, get_retrain_cursor, set_retrain_cursor
++from .annotations import (
++    append_annotations,
++    count_labels,
++    get_retrain_cursor,
++    set_retrain_cursor,
++)
+ from .logging_utils import log_event
+ from .watch import watch_candidates
+ from .batch_html import generate_batch_html
+@@ -103,7 +108,13 @@
+     session_id: str | None = None,
+     annotator_id: str | None = None,
+ ) -> None:
+-    label_map = {"r": "real_anomaly", "a": "artefact", "c": "known", "j": "new_type", "u": "unsure"}
++    label_map = {
++        "r": "real_anomaly",
++        "a": "artefact",
++        "c": "known",
++        "j": "new_type",
++        "u": "unsure",
++    }
+ 
+     new_rows = []
+     has_emb = "embedding" in top.columns
+@@ -154,7 +165,9 @@
+         }
+ 
+         if has_emb and row.get("embedding", None) is not None:
+-            entry["embedding"] = json.dumps(np.asarray(row["embedding"], dtype=float).tolist())
++            entry["embedding"] = json.dumps(
++                np.asarray(row["embedding"], dtype=float).tolist()
++            )
+ 
+         new_rows.append(entry)
+ 
+@@ -179,7 +192,9 @@
+         session_id=session_id,
+         annotator_id=annotator_id,
+     )
+-    print(f"AstroOracle running. candidates={cfg.candidates_path} interval={cfg.check_interval_s}s")
++    print(
++        f"AstroOracle running. candidates={cfg.candidates_path} interval={cfg.check_interval_s}s"
++    )
+ 
+     while True:
+         try:
+@@ -255,9 +270,11 @@
+         return
+ 
+     generate_batch_html(cfg2, top, out_dir)
+-    log_event(cfg2, {"event": "batch_html_generated", "out_dir": str(out_dir), "count": len(top)})
++    log_event(
++        cfg2,
++        {"event": "batch_html_generated", "out_dir": str(out_dir), "count": len(top)},
++    )
+     print(f"Batch HTML written to: {out_dir}/index.html")
+-
+ 
+ 
+ def cmd_augment(args: argparse.Namespace) -> None:
+@@ -327,7 +344,11 @@
+         sp.add_argument("--session-id", default=None)
+         sp.add_argument("--annotator-id", default=None)
+ 
+-        sp.add_argument("--acq", default="entropy", choices=["entropy", "margin", "bald", "badge"])
++        sp.add_argument(
++        "--acq",
++        default="entropy",
++        choices=["entropy", "margin", "bald", "badge"],
++    )
+         sp.add_argument("--diversity", default="kcenter", choices=["kcenter", "dpp", "none"])
+         sp.add_argument("--w-anomaly", type=float, default=0.35)
+         sp.add_argument("--w-acq", type=float, default=0.35)
+@@ -359,11 +380,22 @@
+     add_common(sp_aug)
+     sp_aug.add_argument("--input", required=True, help="Input candidates parquet.")
+     sp_aug.add_argument("--output", required=True, help="Output parquet with extra columns.")
+-    sp_aug.add_argument("--no-cutouts", action="store_true", help="Skip cutout-derived features.")
+-    sp_aug.add_argument("--no-crossmatch", action="store_true", help="Skip Gaia/SIMBAD crossmatch.")
++    sp_aug.add_argument(
++        "--no-cutouts",
++        action="store_true",
++        help="Skip cutout-derived features.",
++    )
++    sp_aug.add_argument(
++        "--no-crossmatch",
++        action="store_true",
++        help="Skip Gaia/SIMBAD crossmatch.",
++    )
+     sp_aug.set_defaults(fn=cmd_augment)
+ 
+-    sp_train = sub.add_parser("train", help="Train/update the ensemble model from annotations.")
++    sp_train = sub.add_parser(
++        "train",
++        help="Train/update the ensemble model from annotations.",
++    )
+     add_common(sp_train)
+     sp_train.set_defaults(fn=cmd_train)
+ 

@@ -12,7 +12,12 @@ import pandas as pd
 from .config import OracleConfig, RankingConfig
 from .core import load_candidates, select_candidates, fetch_cutouts
 from .viz_matplotlib import render_cutouts_matplotlib
-from .annotations import append_annotations, count_labels, get_retrain_cursor, set_retrain_cursor
+from .annotations import (
+    append_annotations,
+    count_labels,
+    get_retrain_cursor,
+    set_retrain_cursor,
+)
 from .logging_utils import log_event
 from .watch import watch_candidates
 from .batch_html import generate_batch_html
@@ -103,7 +108,13 @@ def annotate_batch(
     session_id: str | None = None,
     annotator_id: str | None = None,
 ) -> None:
-    label_map = {"r": "real_anomaly", "a": "artefact", "c": "known", "j": "new_type", "u": "unsure"}
+    label_map = {
+        "r": "real_anomaly",
+        "a": "artefact",
+        "c": "known",
+        "j": "new_type",
+        "u": "unsure",
+    }
 
     new_rows = []
     has_emb = "embedding" in top.columns
@@ -154,7 +165,9 @@ def annotate_batch(
         }
 
         if has_emb and row.get("embedding", None) is not None:
-            entry["embedding"] = json.dumps(np.asarray(row["embedding"], dtype=float).tolist())
+            entry["embedding"] = json.dumps(
+                np.asarray(row["embedding"], dtype=float).tolist()
+            )
 
         new_rows.append(entry)
 
@@ -179,7 +192,9 @@ def cmd_run(args: argparse.Namespace) -> None:
         session_id=session_id,
         annotator_id=annotator_id,
     )
-    print(f"AstroOracle running. candidates={cfg.candidates_path} interval={cfg.check_interval_s}s")
+    print(
+        f"AstroOracle running. candidates={cfg.candidates_path} interval={cfg.check_interval_s}s"
+    )
 
     while True:
         try:
@@ -255,9 +270,11 @@ def cmd_batch_html(args: argparse.Namespace) -> None:
         return
 
     generate_batch_html(cfg2, top, out_dir)
-    log_event(cfg2, {"event": "batch_html_generated", "out_dir": str(out_dir), "count": len(top)})
+    log_event(
+        cfg2,
+        {"event": "batch_html_generated", "out_dir": str(out_dir), "count": len(top)},
+    )
     print(f"Batch HTML written to: {out_dir}/index.html")
-
 
 
 def cmd_augment(args: argparse.Namespace) -> None:
@@ -327,7 +344,11 @@ def main() -> None:
         sp.add_argument("--session-id", default=None)
         sp.add_argument("--annotator-id", default=None)
 
-        sp.add_argument("--acq", default="entropy", choices=["entropy", "margin", "bald", "badge"])
+        sp.add_argument(
+        "--acq",
+        default="entropy",
+        choices=["entropy", "margin", "bald", "badge"],
+    )
         sp.add_argument("--diversity", default="kcenter", choices=["kcenter", "dpp", "none"])
         sp.add_argument("--w-anomaly", type=float, default=0.35)
         sp.add_argument("--w-acq", type=float, default=0.35)
@@ -359,11 +380,22 @@ def main() -> None:
     add_common(sp_aug)
     sp_aug.add_argument("--input", required=True, help="Input candidates parquet.")
     sp_aug.add_argument("--output", required=True, help="Output parquet with extra columns.")
-    sp_aug.add_argument("--no-cutouts", action="store_true", help="Skip cutout-derived features.")
-    sp_aug.add_argument("--no-crossmatch", action="store_true", help="Skip Gaia/SIMBAD crossmatch.")
+    sp_aug.add_argument(
+        "--no-cutouts",
+        action="store_true",
+        help="Skip cutout-derived features.",
+    )
+    sp_aug.add_argument(
+        "--no-crossmatch",
+        action="store_true",
+        help="Skip Gaia/SIMBAD crossmatch.",
+    )
     sp_aug.set_defaults(fn=cmd_augment)
 
-    sp_train = sub.add_parser("train", help="Train/update the ensemble model from annotations.")
+    sp_train = sub.add_parser(
+        "train",
+        help="Train/update the ensemble model from annotations.",
+    )
     add_common(sp_train)
     sp_train.set_defaults(fn=cmd_train)
 
