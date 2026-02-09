@@ -109,9 +109,10 @@ def generate_batch_html(cfg: OracleConfig, candidates_df: pd.DataFrame, out_dir:
         ensure_ascii=False,
     )
     marker = "<!--__EMBEDDED_DATA__-->"
+    script = f'<script type="application/json" id="embedded-data">{embedded}</script>'
     if marker in html:
-        html = html.replace(marker, f'<script type="application/json" id="embedded-data">{embedded}</script>')
+        html = html.replace(marker, script)
     else:
-        html = html.replace("</body>", f'<script type="application/json" id="embedded-data">{embedded}</script></body>')
+        html = html.replace("</body>", f"{script}</body>")
 
     (out_dir / "index.html").write_text(html, encoding="utf-8")

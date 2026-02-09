@@ -129,7 +129,12 @@ def rank_candidates(
     if model is None:
         acq_res = _heuristic_acquisition(df)
     else:
-        acq_res = acquire(probs=probs, embeddings=emb, strategy=cfg.ranking.strategy, probs_mc=probs_mc)
+        acq_res = acquire(
+            probs=probs,
+            embeddings=emb,
+            strategy=cfg.ranking.strategy,
+            probs_mc=probs_mc,
+        )
 
     acq_norm = _normalize(acq_res.score)
     pr = prior_score(df)

@@ -18,7 +18,9 @@ class CandidateRecord(BaseModel):
     id: str = Field(..., description="Stable candidate identifier.")
     ra: float = Field(..., description="Right ascension in degrees.")
     dec: float = Field(..., description="Declination in degrees.")
-    anomaly_score: float = Field(..., description="Upstream anomaly score (higher = more anomalous).")
+    anomaly_score: float = Field(
+        ..., description="Upstream anomaly score (higher = more anomalous)"
+    )
 
     # Optional context
     timestamp: Optional[str] = Field(default=None, description="ISO timestamp for candidate epoch.")
@@ -29,7 +31,7 @@ class CandidateRecord(BaseModel):
 
     # Model inputs
     embedding: Optional[List[float]] = Field(default=None, description="Vector embedding.")
-    features: Optional[Dict[str, float]] = Field(default=None, description="Structured numeric features.")
+    features: Optional[Dict[str, float]] = Field(default=None, description="Numeric features")
     meta: Optional[Dict[str, Any]] = Field(default=None, description="Free-form metadata.")
 
 

@@ -27,7 +27,12 @@ def test_rank_and_select_runs():
     # train a tiny model
     X, _, _ = build_feature_matrix(df)
     y = np.array([0, 1, 2, 3])
-    model = train_ensemble(X, y, classes=["real_anomaly", "artefact", "known", "new_type", "unsure"], n_models=2)
+    model = train_ensemble(
+        X,
+        y,
+        classes=["real_anomaly", "artefact", "known", "new_type", "unsure"],
+        n_models=2,
+    )
 
     ranked, meta = rank_candidates(df.drop(columns=["label"]), cfg, model=model)
     assert len(ranked) == 4

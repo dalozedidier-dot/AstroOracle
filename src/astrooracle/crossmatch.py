@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import os
 
@@ -64,7 +64,11 @@ def crossmatch_gaia(
                 "dist_arcsec": float(sep[int(i)]),
                 "dx_arcsec": float(dx[int(i)]),
                 "dy_arcsec": float(dy[int(i)]),
-                "gmag": float(row.get("phot_g_mean_mag")) if row.get("phot_g_mean_mag") is not None else None,
+                "gmag": (
+                    float(row.get("phot_g_mean_mag"))
+                    if row.get("phot_g_mean_mag") is not None
+                    else None
+                ),
             }
         )
 
@@ -169,6 +173,13 @@ def crossmatch_all(
     neighbor_limit: int = 25,
 ) -> Dict[str, Any]:
     out: Dict[str, Any] = {}
-    out.update(crossmatch_gaia(ra_deg, dec_deg, radius_arcsec=radius_arcsec, neighbor_limit=neighbor_limit))
+    out.update(
+        crossmatch_gaia(
+            ra_deg,
+            dec_deg,
+            radius_arcsec=radius_arcsec,
+            neighbor_limit=neighbor_limit,
+        )
+    )
     out.update(crossmatch_simbad(ra_deg, dec_deg, radius_arcsec=radius_arcsec))
     return out

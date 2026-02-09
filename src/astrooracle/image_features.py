@@ -158,6 +158,8 @@ def aggregate_candidate_features(by_survey: Dict[str, CutoutFeatures]) -> Dict[s
 
     # Pseudo color if DSS2 Red and 2MASS J present
     if "DSS2 Red" in by_survey and "2MASS J" in by_survey:
-        out["feat_color_dss2red_minus_2massj"] = float(by_survey["DSS2 Red"].ap_mag - by_survey["2MASS J"].ap_mag)
+        out["feat_color_dss2red_minus_2massj"] = float(
+            by_survey["DSS2 Red"].ap_mag - by_survey["2MASS J"].ap_mag
+        )
 
     return out

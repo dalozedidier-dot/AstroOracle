@@ -31,7 +31,11 @@ def select_candidates(df: pd.DataFrame, cfg: OracleConfig) -> pd.DataFrame:
     return select_batch(ranked, cfg, k=cfg.n_query)
 
 
-def _synthetic_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tuple[str, np.ndarray]]:
+def _synthetic_cutouts(
+    ra_deg: float,
+    dec_deg: float,
+    cfg: OracleConfig,
+) -> List[Tuple[str, np.ndarray]]:
     results: List[Tuple[str, np.ndarray]] = []
     for survey in cfg.surveys:
         key = f"{ra_deg:.6f}|{dec_deg:.6f}|{survey}"
@@ -89,7 +93,7 @@ def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tupl
         except Exception:
             continue
 
-    # If online retrieval returned nothing, fall back (still deterministic) instead of returning empty.
+    # If online retrieval returned nothing, fall back (still deterministic).
     if not results:
         return _synthetic_cutouts(ra_deg, dec_deg, cfg)
 

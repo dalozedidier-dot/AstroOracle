@@ -54,7 +54,12 @@ def train_ensemble(
         present = set(int(v) for v in np.unique(y[idx]))
         missing = [lab for lab in all_labels if int(lab) not in present]
         if missing:
-            idx = np.concatenate([idx, np.array([per_class_idx[int(lab)] for lab in missing], dtype=int)])
+            idx = np.concatenate(
+                [
+                    idx,
+                    np.array([per_class_idx[int(lab)] for lab in missing], dtype=int),
+                ]
+            )
 
         Xm, ym = X[idx], y[idx]
 

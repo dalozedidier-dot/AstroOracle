@@ -1,12 +1,29 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 
 
-NUMERIC_PRIOR_COLS = ['mag', 'snr', 'ruwe', 'anomaly_score', 'feat_snr_max', 'feat_snr_min', 'feat_circularity_min', 'feat_spike_max', 'feat_color_dss2red_minus_2massj', 'gaia_match', 'simbad_match', 'nearest_gaia_dist_arcsec', 'gaia_parallax_mas', 'gaia_pmra_masyr', 'gaia_pmdec_masyr', 'gaia_gmag']
+NUMERIC_PRIOR_COLS = [
+    "mag",
+    "snr",
+    "ruwe",
+    "anomaly_score",
+    "feat_snr_max",
+    "feat_snr_min",
+    "feat_circularity_min",
+    "feat_spike_max",
+    "feat_color_dss2red_minus_2massj",
+    "gaia_match",
+    "simbad_match",
+    "nearest_gaia_dist_arcsec",
+    "gaia_parallax_mas",
+    "gaia_pmra_masyr",
+    "gaia_pmdec_masyr",
+    "gaia_gmag",
+]
 
 
 def _safe_numeric(df: pd.DataFrame, cols: List[str]) -> np.ndarray:
