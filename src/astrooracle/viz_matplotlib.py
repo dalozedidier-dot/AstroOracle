@@ -5,9 +5,33 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 import matplotlib.pyplot as plt
-from astropy.visualization import ZScaleInterval, ImageNormalize
+import matplotlib.colors as mcolors
+
+try:
+    # astropy est un extra optionnel (.[astro]) : ne doit pas casser l'import du package
+    from astropy.visualization import ZScaleInterval, ImageNormalize
+except Exception:  # pragma: no cover
+    ZScaleInterval = None  # type: ignore[assignment]
+    ImageNormalize = None  # type: ignore[assignment]
 
 from .config import OracleConfig
+
+
+def _fallback_norm(data: np.ndarray) -> Optional[mcolors.Normalize]:
+    """Normalisation robuste sans dépendance astropy.
+
+    - utilise des percentiles (1, 99) pour limiter l'impact des outliers
+    - retourne None si les bornes sont invalides (NaN, inf, bornes égales)
+    """
+    try:
+        lo, hi = np.nanpercentile(data, [1, 99])
+    except Exception:
+        return None
+    if not (np.isfinite(lo) and np.isfinite(hi)):
+        return None
+    if float(lo) == float(hi):
+        return None
+    return mcolors.Normalize(vmin=float(lo), vmax=float(hi), clip=True)
 
 
 def render_cutouts_matplotlib(
@@ -26,7 +50,11 @@ def render_cutouts_matplotlib(
         axes = [axes]
 
     for ax, (survey, data) in zip(axes, cutouts):
-        norm = ImageNormalize(data, interval=ZScaleInterval())
+        if ImageNormalize is not None and ZScaleInterval is not None:
+            norm = ImageNormalize(data, interval=ZScaleInterval())
+        else:
+            norm = _fallback_norm(data)
+
         ax.imshow(data, cmap="gray", norm=norm, origin="lower")
         ax.set_title(survey, fontsize=9)
         ax.axis("off")

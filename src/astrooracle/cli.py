@@ -203,8 +203,8 @@ def cmd_train(args: argparse.Namespace) -> None:
 def cmd_stats(args: argparse.Namespace) -> None:
     cfg = _make_cfg(args)
     a = annotation_stats(cfg)
-    l = log_stats(cfg)
-    print(json.dumps({"annotations": a, "logs": l}, indent=2, ensure_ascii=False))
+    logs_stats = log_stats(cfg)
+    print(json.dumps({"annotations": a, "logs": logs_stats}, indent=2, ensure_ascii=False))
 
 
 def cmd_serve(args: argparse.Namespace) -> None:
