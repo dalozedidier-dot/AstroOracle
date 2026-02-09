@@ -22,8 +22,10 @@ def read_annotations(cfg: OracleConfig) -> pd.DataFrame:
     if not cfg.annot_path.exists():
         return pd.DataFrame()
     df = pd.read_csv(cfg.annot_path)
+
     if "embedding" in df.columns and not df.empty:
-        def _loads(x):
+
+        def _loads(x: Any) -> Any:
             if pd.isna(x):
                 return None
             if isinstance(x, str) and x.strip():
@@ -32,7 +34,9 @@ def read_annotations(cfg: OracleConfig) -> pd.DataFrame:
                 except Exception:
                     return None
             return None
+
         df["embedding_vec"] = df["embedding"].map(_loads)
+
     return df
 
 

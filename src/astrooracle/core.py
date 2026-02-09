@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import List, Tuple
-
-import os
 import hashlib
+import os
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -32,7 +31,9 @@ def select_candidates(df: pd.DataFrame, cfg: OracleConfig) -> pd.DataFrame:
 
 
 def _synthetic_cutouts(
-    ra_deg: float, dec_deg: float, cfg: OracleConfig
+    ra_deg: float,
+    dec_deg: float,
+    cfg: OracleConfig,
 ) -> List[Tuple[str, np.ndarray]]:
     results: List[Tuple[str, np.ndarray]] = []
     for survey in cfg.surveys:
@@ -47,12 +48,7 @@ def _synthetic_cutouts(
         sx = rng.uniform(0.06 * n, 0.12 * n)
         sy = rng.uniform(0.06 * n, 0.12 * n)
 
-        blob = np.exp(
-            -(
-                ((xx - cx) ** 2) / (2 * sx**2)
-                + ((yy - cy) ** 2) / (2 * sy**2)
-            )
-        )
+        blob = np.exp(-(((xx - cx) ** 2) / (2 * sx**2) + ((yy - cy) ** 2) / (2 * sy**2)))
         noise = rng.normal(0, 0.05, size=(n, n))
         bg = rng.normal(0, 0.01, size=(n, n))
         img = (0.8 * blob + noise + bg).astype(float)
@@ -61,25 +57,22 @@ def _synthetic_cutouts(
 
 
 def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tuple[str, np.ndarray]]:
-    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {
-        "1",
-        "true",
-        "yes",
-    }
+    offline_cfg = bool(getattr(cfg, "offline", False))
+    offline_env = os.environ.get("ASTROORACLE_OFFLINE", "").strip().lower() in {"1", "true", "yes"}
+    offline = offline_cfg or offline_env
 
     if offline:
         return _synthetic_cutouts(ra_deg, dec_deg, cfg)
 
     try:
-        from astropy import units as u
-        from astropy.coordinates import SkyCoord
-        from astroquery.skyview import SkyView
+        from astropy import units as u  # type: ignore
+        from astropy.coordinates import SkyCoord  # type: ignore
+        from astroquery.skyview import SkyView  # type: ignore
     except Exception:
         return _synthetic_cutouts(ra_deg, dec_deg, cfg)
 
     results: List[Tuple[str, np.ndarray]] = []
     coord = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg)
-
     for survey in cfg.surveys:
         try:
             images = SkyView.get_images(
@@ -97,30 +90,4 @@ def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tupl
         except Exception:
             continue
 
-    if not results:
-        return _synthetic_cutouts(ra_deg, dec_deg, cfg)
-
-    return results
-
-    from astropy import units as u
-    from astropy.coordinates import SkyCoord
-    from astroquery.skyview import SkyView
-
-    coord = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg)
-    for survey in cfg.surveys:
-        try:
-            images = SkyView.get_images(
-                position=coord,
-                survey=[survey],
-                pixels=cfg.pixels,
-                radius=cfg.cutout_radius_arcmin * u.arcmin,
-            )
-            if not images:
-                continue
-            data = images[0][0].data
-            if data is None:
-                continue
-            results.append((survey, data))
-        except Exception:
-            continue
-    return results
+    return results if results else _synthetic_cutouts(ra_deg, dec_deg, cfg)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import re
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -52,10 +52,19 @@ def generate_batch_html(cfg: OracleConfig, candidates_df: pd.DataFrame, out_dir:
             _save_png(data, png)
 
         recs.append(
-            {"id": str(cid), "ra": ra, "dec": dec, "score": float(r["anomaly_score"]), "surveys": surveys}
+            {
+                "id": str(cid),
+                "ra": ra,
+                "dec": dec,
+                "score": float(r["anomaly_score"]),
+                "surveys": surveys,
+            }
         )
 
     (out_dir / "candidates.json").write_text(json.dumps(recs, indent=2), encoding="utf-8")
 
     template = Path(__file__).resolve().parents[2] / "templates" / "batch_index.html"
-    (out_dir / "index.html").write_text(template.read_text(encoding="utf-8"), encoding="utf-8")
+    (out_dir / "index.html").write_text(
+        template.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
