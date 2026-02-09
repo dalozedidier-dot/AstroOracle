@@ -56,7 +56,11 @@ def _synthetic_cutouts(
     return results
 
 
-def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tuple[str, np.ndarray]]:
+def fetch_cutouts(
+    ra_deg: float,
+    dec_deg: float,
+    cfg: OracleConfig,
+) -> List[Tuple[str, np.ndarray]]:
     offline_cfg = bool(getattr(cfg, "offline", False))
     offline_env = os.environ.get("ASTROORACLE_OFFLINE", "").strip().lower() in {"1", "true", "yes"}
     offline = offline_cfg or offline_env

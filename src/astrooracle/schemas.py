@@ -24,7 +24,10 @@ class CandidateRecord(BaseModel):
     )
 
     # Optional context
-    timestamp: Optional[str] = Field(default=None, description="ISO timestamp for candidate epoch.")
+    timestamp: Optional[str] = Field(
+        default=None,
+        description="ISO timestamp for candidate epoch.",
+    )
     survey: Optional[str] = Field(default=None, description="Upstream survey tag.")
     mag: Optional[float] = Field(default=None, description="Apparent magnitude if available.")
     snr: Optional[float] = Field(default=None, description="Signal-to-noise ratio if available.")

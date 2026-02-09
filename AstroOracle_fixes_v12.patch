@@ -1,0 +1,973 @@
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/examples/sample_candidates.py /mnt/data/AstroOracle_v12/examples/sample_candidates.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/examples/sample_candidates.py	2026-02-09 10:57:00.315837890 +0000
++++ /mnt/data/AstroOracle_v12/examples/sample_candidates.py	2026-02-09 10:56:15.997045249 +0000
+@@ -1,20 +1,25 @@
+ #!/usr/bin/env python3
+ from pathlib import Path
++
+ import numpy as np
+ import pandas as pd
+ 
+-def main():
++
++def main() -> None:
+     out = Path("candidates.parquet")
+     n = 50
+-    df = pd.DataFrame({
+-        "id": [f"cand_{i:04d}" for i in range(n)],
+-        "ra": np.random.uniform(0, 360, size=n),
+-        "dec": np.random.uniform(-30, 30, size=n),
+-        "anomaly_score": np.random.normal(0, 1, size=n),
+-    })
++    df = pd.DataFrame(
++        {
++            "id": [f"cand_{i:04d}" for i in range(n)],
++            "ra": np.random.uniform(0, 360, size=n),
++            "dec": np.random.uniform(-30, 30, size=n),
++            "anomaly_score": np.random.normal(0, 1, size=n),
++        }
++    )
+     df["embedding"] = [np.random.normal(0, 1, size=16).astype(float) for _ in range(n)]
+     df.to_parquet(out, index=False)
+     print(f"Wrote {out}")
+ 
++
+ if __name__ == "__main__":
+     main()
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/__init__.py /mnt/data/AstroOracle_v12/src/astrooracle/__init__.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/__init__.py	2026-02-09 10:57:00.317887433 +0000
++++ /mnt/data/AstroOracle_v12/src/astrooracle/__init__.py	2026-02-09 10:56:15.997886019 +0000
+@@ -1 +1 @@
+-__version__ = '0.2.0'
++__version__ = "0.2.0"
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/acquisition.py /mnt/data/AstroOracle_v12/src/astrooracle/acquisition.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/acquisition.py	2026-02-09 10:57:00.319443864 +0000
++++ /mnt/data/AstroOracle_v12/src/astrooracle/acquisition.py	2026-02-09 10:56:15.998254524 +0000
+@@ -27,7 +27,9 @@
+     # probs_mc: [T, N, C]
+     p_bar = probs_mc.mean(axis=0)
+     h_bar = entropy(p_bar, eps=eps)
+-    h_each = np.array([entropy(probs_mc[t], eps=eps) for t in range(probs_mc.shape[0])]).mean(axis=0)
++    h_each = np.array(
++        [entropy(probs_mc[t], eps=eps) for t in range(probs_mc.shape[0])]
++    ).mean(axis=0)
+     return h_bar - h_each
+ 
+ 
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/annotations.py /mnt/data/AstroOracle_v12/src/astrooracle/annotations.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/annotations.py	2026-02-09 10:57:00.320023106 +0000
++++ /mnt/data/AstroOracle_v12/src/astrooracle/annotations.py	2026-02-09 10:56:15.998600657 +0000
+@@ -22,8 +22,10 @@
+     if not cfg.annot_path.exists():
+         return pd.DataFrame()
+     df = pd.read_csv(cfg.annot_path)
++
+     if "embedding" in df.columns and not df.empty:
+-        def _loads(x):
++
++        def _loads(x: Any) -> Any:
+             if pd.isna(x):
+                 return None
+             if isinstance(x, str) and x.strip():
+@@ -32,7 +34,9 @@
+                 except Exception:
+                     return None
+             return None
++
+         df["embedding_vec"] = df["embedding"].map(_loads)
++
+     return df
+ 
+ 
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/api.py /mnt/data/AstroOracle_v12/src/astrooracle/api.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/api.py	2026-02-09 10:57:00.320537112 +0000
++++ /mnt/data/AstroOracle_v12/src/astrooracle/api.py	2026-02-09 10:56:15.999079194 +0000
+@@ -1,10 +1,9 @@
+ from __future__ import annotations
+ 
+-from pathlib import Path
+ from typing import List, Optional
+ 
+ import pandas as pd
+-from fastapi import FastAPI, HTTPException
++from fastapi import FastAPI
+ from pydantic import BaseModel
+ 
+ from .config import OracleConfig
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/batch_html.py /mnt/data/AstroOracle_v12/src/astrooracle/batch_html.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/batch_html.py	2026-02-09 10:57:00.320835617 +0000
++++ /mnt/data/AstroOracle_v12/src/astrooracle/batch_html.py	2026-02-09 10:56:15.999552556 +0000
+@@ -1,7 +1,7 @@
+ from __future__ import annotations
+ 
+-import re
+ import json
++import re
+ from pathlib import Path
+ from typing import Any, Dict, List
+ 
+@@ -52,10 +52,22 @@
+             _save_png(data, png)
+ 
+         recs.append(
+-            {"id": str(cid), "ra": ra, "dec": dec, "score": float(r["anomaly_score"]), "surveys": surveys}
++            {
++                "id": str(cid),
++                "ra": ra,
++                "dec": dec,
++                "score": float(r["anomaly_score"]),
++                "surveys": surveys,
++            }
+         )
+ 
+     (out_dir / "candidates.json").write_text(json.dumps(recs, indent=2), encoding="utf-8")
+ 
+     template = Path(__file__).resolve().parents[2] / "templates" / "batch_index.html"
+-    (out_dir / "index.html").write_text(template.read_text(encoding="utf-8"), encoding="utf-8")
++    html = template.read_text(encoding="utf-8")
++    embedded = json.dumps(recs, ensure_ascii=False)
++    html = html.replace(
++        "const EMBEDDED_CANDIDATES = null; // __CANDIDATES_JSON__",
++        f"const EMBEDDED_CANDIDATES = {embedded};",
++    )
++    (out_dir / "index.html").write_text(html, encoding="utf-8")
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/cli.py /mnt/data/AstroOracle_v12/src/astrooracle/cli.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/cli.py	2026-02-09 10:57:00.321457554 +0000
++++ /mnt/data/AstroOracle_v12/src/astrooracle/cli.py	2026-02-09 11:10:56.310630290 +0000
+@@ -23,8 +23,10 @@
+ def _make_cfg(args: argparse.Namespace) -> OracleConfig:
+     cfg0 = OracleConfig.default()
+     save_dir = Path(args.save_cutouts) if args.save_cutouts else None
+-    cutout_radius = cfg0.cutout_radius_arcmin if args.cutout_radius_arcmin is None else float(args.cutout_radius_arcmin)
+-
++    if args.cutout_radius_arcmin is None:
++        cutout_radius = cfg0.cutout_radius_arcmin
++    else:
++        cutout_radius = float(args.cutout_radius_arcmin)
+     ranking = RankingConfig(
+         strategy=str(args.acq),
+         diversity=str(args.diversity),
+@@ -54,24 +56,54 @@
+     )
+ 
+ 
+-def maybe_retrain(cfg: OracleConfig, session_id: str | None = None, annotator_id: str | None = None) -> None:
++def maybe_retrain(
++    cfg: OracleConfig,
++    session_id: str | None = None,
++    annotator_id: str | None = None,
++) -> None:
+     total = count_labels(cfg)
+     cursor = get_retrain_cursor(cfg)
+     new_since = total - cursor
+     if new_since >= cfg.min_new_labels_for_retrain:
+         print(f"Retrain triggered: {new_since} new labels.")
+-        log_event(cfg, {"event": "retrain_triggered", "new_labels": new_since, "total_labels": total}, session_id=session_id, annotator_id=annotator_id)
++        log_event(
++            cfg,
++            {"event": "retrain_triggered", "new_labels": new_since, "total_labels": total},
++            session_id=session_id,
++            annotator_id=annotator_id,
++        )
+         try:
+             subprocess.run(["python", str(cfg.retrain_script)], check=True)
+             set_retrain_cursor(cfg, total)
+-            log_event(cfg, {"event": "retrain_success"}, session_id=session_id, annotator_id=annotator_id)
++            log_event(
++                cfg,
++                {"event": "retrain_success"},
++                session_id=session_id,
++                annotator_id=annotator_id,
++            )
+         except Exception as e:
+-            log_event(cfg, {"event": "retrain_failed", "error": str(e)}, session_id=session_id, annotator_id=annotator_id)
++            log_event(
++                cfg,
++                {"event": "retrain_failed", "error": str(e)},
++                session_id=session_id,
++                annotator_id=annotator_id,
++            )
+             print(f"Retrain failed: {e}")
+ 
+ 
+-def annotate_batch(cfg: OracleConfig, top: pd.DataFrame, session_id: str | None = None, annotator_id: str | None = None) -> None:
+-    label_map = {"r": "real_anomaly", "a": "artefact", "c": "known", "j": "new_type", "u": "unsure"}
++def annotate_batch(
++    cfg: OracleConfig,
++    top: pd.DataFrame,
++    session_id: str | None = None,
++    annotator_id: str | None = None,
++) -> None:
++    label_map = {
++        "r": "real_anomaly",
++        "a": "artefact",
++        "c": "known",
++        "j": "new_type",
++        "u": "unsure",
++    }
+ 
+     new_rows = []
+     has_emb = "embedding" in top.columns
+@@ -95,7 +127,11 @@
+         render_cutouts_matplotlib(cutouts, title, cfg, save_path=save_path)
+ 
+         while True:
+-            choice = input("Label ? [r]éel [a]rtefact [c]onnu [j]nouveau type [u]incertain [s]kip -> ").strip().lower()
++            prompt = (
++                "Label ? [r]éel [a]rtefact [c]onnu [j]nouveau type "
++                "[u]incertain [s]kip -> "
++            )
++            choice = input(prompt).strip().lower()
+             if choice in {"r", "a", "c", "j", "u", "s"}:
+                 break
+ 
+@@ -124,7 +160,12 @@
+ 
+     if new_rows:
+         append_annotations(cfg, new_rows)
+-        log_event(cfg, {"event": "new_annotations", "count": len(new_rows)}, session_id=session_id, annotator_id=annotator_id)
++        log_event(
++            cfg,
++            {"event": "new_annotations", "count": len(new_rows)},
++            session_id=session_id,
++            annotator_id=annotator_id,
++        )
+         maybe_retrain(cfg, session_id=session_id, annotator_id=annotator_id)
+ 
+ 
+@@ -132,8 +173,15 @@
+     cfg = _make_cfg(args)
+     session_id = args.session_id
+     annotator_id = args.annotator_id
+-    log_event(cfg, {"event": "oracle_started", "mode": "poll"}, session_id=session_id, annotator_id=annotator_id)
+-    print(f"AstroOracle running. candidates={cfg.candidates_path} interval={cfg.check_interval_s}s")
++    log_event(
++        cfg,
++        {"event": "oracle_started", "mode": "poll"},
++        session_id=session_id,
++        annotator_id=annotator_id,
++    )
++    print(
++        f"AstroOracle running. candidates={cfg.candidates_path} interval={cfg.check_interval_s}s",
++    )
+ 
+     while True:
+         try:
+@@ -143,11 +191,21 @@
+                 if not top.empty:
+                     annotate_batch(cfg, top, session_id=session_id, annotator_id=annotator_id)
+         except KeyboardInterrupt:
+-            log_event(cfg, {"event": "oracle_stopped"}, session_id=session_id, annotator_id=annotator_id)
++            log_event(
++                cfg,
++                {"event": "oracle_stopped"},
++                session_id=session_id,
++                annotator_id=annotator_id,
++            )
+             print("Stopped.")
+             break
+         except Exception as e:
+-            log_event(cfg, {"event": "error", "msg": str(e)}, session_id=session_id, annotator_id=annotator_id)
++            log_event(
++                cfg,
++                {"event": "error", "msg": str(e)},
++                session_id=session_id,
++                annotator_id=annotator_id,
++            )
+             print(f"Error: {e}")
+ 
+         time.sleep(cfg.check_interval_s)
+@@ -157,7 +215,12 @@
+     cfg = _make_cfg(args)
+     session_id = args.session_id
+     annotator_id = args.annotator_id
+-    log_event(cfg, {"event": "oracle_started", "mode": "watch"}, session_id=session_id, annotator_id=annotator_id)
++    log_event(
++        cfg,
++        {"event": "oracle_started", "mode": "watch"},
++        session_id=session_id,
++        annotator_id=annotator_id,
++    )
+     print(f"AstroOracle watching {cfg.candidates_path}")
+ 
+     def _on_change():
+@@ -168,7 +231,12 @@
+                 if not top.empty:
+                     annotate_batch(cfg, top, session_id=session_id, annotator_id=annotator_id)
+         except Exception as e:
+-            log_event(cfg, {"event": "error", "msg": str(e)}, session_id=session_id, annotator_id=annotator_id)
++            log_event(
++                cfg,
++                {"event": "error", "msg": str(e)},
++                session_id=session_id,
++                annotator_id=annotator_id,
++            )
+             print(f"Error: {e}")
+ 
+     watch_candidates(cfg.candidates_path, _on_change)
+@@ -196,15 +264,21 @@
+ def cmd_train(args: argparse.Namespace) -> None:
+     cfg = _make_cfg(args)
+     metrics = train_from_files(cfg)
+-    log_event(cfg, {"event": "train", "metrics": {"ece": metrics.get("ece"), "n_train": metrics.get("n_train")}})
++    log_event(
++        cfg,
++        {
++            "event": "train",
++            "metrics": {"ece": metrics.get("ece"), "n_train": metrics.get("n_train")},
++        },
++    )
+     print(json.dumps(metrics, indent=2, ensure_ascii=False))
+ 
+ 
+ def cmd_stats(args: argparse.Namespace) -> None:
+     cfg = _make_cfg(args)
+     a = annotation_stats(cfg)
+-    l = log_stats(cfg)
+-    print(json.dumps({"annotations": a, "logs": l}, indent=2, ensure_ascii=False))
++    logs_stats = log_stats(cfg)
++    print(json.dumps({"annotations": a, "logs": logs_stats}, indent=2, ensure_ascii=False))
+ 
+ 
+ def cmd_serve(args: argparse.Namespace) -> None:
+@@ -231,11 +305,18 @@
+         sp.add_argument("--n-query", type=int, default=6)
+         sp.add_argument("--pixels", type=int, default=400)
+         sp.add_argument("--cutout-radius-arcmin", type=float, default=None)
+-        sp.add_argument("--survey", action="append", default=["DSS2 Red", "2MASS J"])
++        sp.add_argument(
++            "--survey",
++            action="append",
++            default=["DSS2 Red", "2MASS J"],
++        )
+         sp.add_argument("--no-gui", action="store_true")
+         sp.add_argument("--save-cutouts", default=None)
+-        sp.add_argument("--offline", action="store_true", help="Use synthetic cutouts (no network).")
+-
++        sp.add_argument(
++            "--offline",
++            action="store_true",
++            help="Use synthetic cutouts (no network).",
++        )
+         sp.add_argument("--session-id", default=None)
+         sp.add_argument("--annotator-id", default=None)
+ 
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/core.py /mnt/data/AstroOracle_v12/src/astrooracle/core.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/core.py	2026-02-09 10:57:00.322414132 +0000
++++ /mnt/data/AstroOracle_v12/src/astrooracle/core.py	2026-02-09 11:10:56.312007429 +0000
+@@ -1,9 +1,8 @@
+ from __future__ import annotations
+ 
+-from typing import List, Tuple
+-
+-import os
+ import hashlib
++import os
++from typing import List, Tuple
+ 
+ import numpy as np
+ import pandas as pd
+@@ -31,34 +30,52 @@
+     return select_batch(ranked, cfg, k=cfg.n_query)
+ 
+ 
+-def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tuple[str, np.ndarray]]:
+-    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {"1", "true", "yes"}
++def _synthetic_cutouts(
++    ra_deg: float,
++    dec_deg: float,
++    cfg: OracleConfig,
++) -> List[Tuple[str, np.ndarray]]:
+     results: List[Tuple[str, np.ndarray]] = []
++    for survey in cfg.surveys:
++        key = f"{ra_deg:.6f}|{dec_deg:.6f}|{survey}"
++        seed = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
++        rng = np.random.default_rng(seed)
++
++        n = int(cfg.pixels)
++        yy, xx = np.mgrid[0:n, 0:n]
++        cx = rng.uniform(0.35 * n, 0.65 * n)
++        cy = rng.uniform(0.35 * n, 0.65 * n)
++        sx = rng.uniform(0.06 * n, 0.12 * n)
++        sy = rng.uniform(0.06 * n, 0.12 * n)
++
++        blob = np.exp(-(((xx - cx) ** 2) / (2 * sx**2) + ((yy - cy) ** 2) / (2 * sy**2)))
++        noise = rng.normal(0, 0.05, size=(n, n))
++        bg = rng.normal(0, 0.01, size=(n, n))
++        img = (0.8 * blob + noise + bg).astype(float)
++        results.append((survey, img))
++    return results
++
++
++def fetch_cutouts(
++    ra_deg: float,
++    dec_deg: float,
++    cfg: OracleConfig,
++) -> List[Tuple[str, np.ndarray]]:
++    offline_cfg = bool(getattr(cfg, "offline", False))
++    offline_env = os.environ.get("ASTROORACLE_OFFLINE", "").strip().lower() in {"1", "true", "yes"}
++    offline = offline_cfg or offline_env
+ 
+     if offline:
+-        for survey in cfg.surveys:
+-            key = f"{ra_deg:.6f}|{dec_deg:.6f}|{survey}"
+-            seed = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
+-            rng = np.random.default_rng(seed)
+-
+-            n = int(cfg.pixels)
+-            yy, xx = np.mgrid[0:n, 0:n]
+-            cx = rng.uniform(0.35 * n, 0.65 * n)
+-            cy = rng.uniform(0.35 * n, 0.65 * n)
+-            sx = rng.uniform(0.06 * n, 0.12 * n)
+-            sy = rng.uniform(0.06 * n, 0.12 * n)
+-
+-            blob = np.exp(-(((xx - cx) ** 2) / (2 * sx**2) + ((yy - cy) ** 2) / (2 * sy**2)))
+-            noise = rng.normal(0, 0.05, size=(n, n))
+-            bg = rng.normal(0, 0.01, size=(n, n))
+-            img = (0.8 * blob + noise + bg).astype(float)
+-            results.append((survey, img))
+-        return results
+-
+-    from astropy import units as u
+-    from astropy.coordinates import SkyCoord
+-    from astroquery.skyview import SkyView
++        return _synthetic_cutouts(ra_deg, dec_deg, cfg)
++
++    try:
++        from astropy import units as u  # type: ignore
++        from astropy.coordinates import SkyCoord  # type: ignore
++        from astroquery.skyview import SkyView  # type: ignore
++    except Exception:
++        return _synthetic_cutouts(ra_deg, dec_deg, cfg)
+ 
++    results: List[Tuple[str, np.ndarray]] = []
+     coord = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg)
+     for survey in cfg.surveys:
+         try:
+@@ -76,4 +93,5 @@
+             results.append((survey, data))
+         except Exception:
+             continue
+-    return results
++
++    return results if results else _synthetic_cutouts(ra_deg, dec_deg, cfg)
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/diversity.py /mnt/data/AstroOracle_v12/src/astrooracle/diversity.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/diversity.py	2026-02-09 10:57:00.322788825 +0000
++++ /mnt/data/AstroOracle_v12/src/astrooracle/diversity.py	2026-02-09 10:56:16.007556786 +0000
+@@ -1,6 +1,6 @@
+ from __future__ import annotations
+ 
+-from typing import List, Optional, Tuple
++from typing import List, Optional
+ 
+ import numpy as np
+ 
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/ml/features.py /mnt/data/AstroOracle_v12/src/astrooracle/ml/features.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/ml/features.py	2026-02-09 10:57:00.324154600 +0000
++++ /mnt/data/AstroOracle_v12/src/astrooracle/ml/features.py	2026-02-09 10:56:16.013460974 +0000
+@@ -1,6 +1,6 @@
+ from __future__ import annotations
+ 
+-from typing import Dict, List, Optional, Tuple
++from typing import List, Optional, Tuple
+ 
+ import numpy as np
+ import pandas as pd
+@@ -17,13 +17,15 @@
+         else:
+             v = np.full(len(df), np.nan, dtype=float)
+         out.append(v)
++
+     X = np.stack(out, axis=1)
+-    # Replace nan with column median
++
+     for j in range(X.shape[1]):
+         col = X[:, j]
+         med = np.nanmedian(col) if np.isfinite(col).any() else 0.0
+         col = np.where(np.isfinite(col), col, med)
+         X[:, j] = col
++
+     return X
+ 
+ 
+@@ -34,7 +36,8 @@
+     emb = None
+     if "embedding" in df.columns:
+         try:
+-            emb = np.stack(df["embedding"].apply(lambda x: np.asarray(x, dtype=float)).to_numpy())
++            emb_series = df["embedding"].apply(lambda x: np.asarray(x, dtype=float))
++            emb = np.stack(emb_series.to_numpy())
+         except Exception:
+             emb = None
+ 
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/ml/model.py /mnt/data/AstroOracle_v12/src/astrooracle/ml/model.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/ml/model.py	2026-02-09 10:57:00.324651607 +0000
++++ /mnt/data/AstroOracle_v12/src/astrooracle/ml/model.py	2026-02-09 10:56:16.013942175 +0000
+@@ -1,5 +1,6 @@
+ from __future__ import annotations
+ 
++import inspect
+ from dataclasses import dataclass
+ from typing import List
+ 
+@@ -29,6 +30,14 @@
+         return f"ensemble_logreg_calib_v2|m={len(self.pipelines)}"
+ 
+ 
++def _make_logreg() -> LogisticRegression:
++    params = inspect.signature(LogisticRegression).parameters
++    kwargs = {"max_iter": 2000}
++    if "multi_class" in params:
++        kwargs["multi_class"] = "auto"
++    return LogisticRegression(**kwargs)
++
++
+ def train_ensemble(
+     X: np.ndarray,
+     y: np.ndarray,
+@@ -41,23 +50,22 @@
+     n = X.shape[0]
+     all_labels = np.unique(y)
+ 
+-    # Precompute at least one example index per class (for bootstrap completion)
+     per_class_idx = {}
+     for lab in all_labels:
+         per_class_idx[int(lab)] = int(np.where(y == lab)[0][0])
+ 
+-    for m in range(n_models):
++    for _ in range(n_models):
+         idx = rng.integers(0, n, size=n)
+ 
+-        # Ensure every observed class appears at least once in the bootstrap sample
+         present = set(int(v) for v in np.unique(y[idx]))
+         missing = [lab for lab in all_labels if int(lab) not in present]
+         if missing:
+-            idx = np.concatenate([idx, np.array([per_class_idx[int(lab)] for lab in missing], dtype=int)])
++            extra = np.array([per_class_idx[int(lab)] for lab in missing], dtype=int)
++            idx = np.concatenate([idx, extra])
+ 
+         Xm, ym = X[idx], y[idx]
+ 
+-        base = LogisticRegression(max_iter=2000, multi_class="auto")
++        base = _make_logreg()
+ 
+         unique, counts = np.unique(ym, return_counts=True)
+         min_count = int(counts.min()) if len(counts) else 0
+@@ -84,7 +92,11 @@
+     ece = 0.0
+     for i in range(n_bins):
+         lo, hi = bins[i], bins[i + 1]
+-        mask = (conf >= lo) & (conf < hi) if i < n_bins - 1 else (conf >= lo) & (conf <= hi)
++        if i < n_bins - 1:
++            mask = (conf >= lo) & (conf < hi)
++        else:
++            mask = (conf >= lo) & (conf <= hi)
++
+         if not np.any(mask):
+             continue
+         ece += np.abs(acc[mask].mean() - conf[mask].mean()) * (mask.mean())
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/ranking.py /mnt/data/AstroOracle_v12/src/astrooracle/ranking.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/ranking.py	2026-02-09 10:57:00.326467879 +0000
++++ /mnt/data/AstroOracle_v12/src/astrooracle/ranking.py	2026-02-09 10:56:16.009296749 +0000
+@@ -74,7 +74,12 @@
+     if model is None:
+         acq_res = _heuristic_acquisition(df)
+     else:
+-        acq_res = acquire(probs=probs, embeddings=emb, strategy=cfg.ranking.strategy, probs_mc=probs_mc)
++        acq_res = acquire(
++            probs=probs,
++            embeddings=emb,
++            strategy=cfg.ranking.strategy,
++            probs_mc=probs_mc,
++        )
+ 
+     acq_norm = _normalize(acq_res.score)
+     pr = prior_score(df)
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/schemas.py /mnt/data/AstroOracle_v12/src/astrooracle/schemas.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/schemas.py	2026-02-09 10:57:00.326969167 +0000
++++ /mnt/data/AstroOracle_v12/src/astrooracle/schemas.py	2026-02-09 11:10:56.313032306 +0000
+@@ -18,10 +18,16 @@
+     id: str = Field(..., description="Stable candidate identifier.")
+     ra: float = Field(..., description="Right ascension in degrees.")
+     dec: float = Field(..., description="Declination in degrees.")
+-    anomaly_score: float = Field(..., description="Upstream anomaly score (higher = more anomalous).")
++    anomaly_score: float = Field(
++        ...,
++        description="Upstream anomaly score (higher = more anomalous).",
++    )
+ 
+     # Optional context
+-    timestamp: Optional[str] = Field(default=None, description="ISO timestamp for candidate epoch.")
++    timestamp: Optional[str] = Field(
++        default=None,
++        description="ISO timestamp for candidate epoch.",
++    )
+     survey: Optional[str] = Field(default=None, description="Upstream survey tag.")
+     mag: Optional[float] = Field(default=None, description="Apparent magnitude if available.")
+     snr: Optional[float] = Field(default=None, description="Signal-to-noise ratio if available.")
+@@ -29,7 +35,10 @@
+ 
+     # Model inputs
+     embedding: Optional[List[float]] = Field(default=None, description="Vector embedding.")
+-    features: Optional[Dict[str, float]] = Field(default=None, description="Structured numeric features.")
++    features: Optional[Dict[str, float]] = Field(
++        default=None,
++        description="Structured numeric features.",
++    )
+     meta: Optional[Dict[str, Any]] = Field(default=None, description="Free-form metadata.")
+ 
+ 
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/stats.py /mnt/data/AstroOracle_v12/src/astrooracle/stats.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/stats.py	2026-02-09 10:57:00.327550553 +0000
++++ /mnt/data/AstroOracle_v12/src/astrooracle/stats.py	2026-02-09 10:56:16.010489048 +0000
+@@ -1,11 +1,14 @@
+ from __future__ import annotations
+ 
+-from pathlib import Path
+ from typing import Dict
+ 
+-import duckdb
+ import pandas as pd
+ 
++try:
++    import duckdb  # type: ignore
++except Exception:  # pragma: no cover
++    duckdb = None  # type: ignore
++
+ from .config import OracleConfig
+ 
+ 
+@@ -15,16 +18,38 @@
+     df = pd.read_csv(cfg.annot_path)
+     out = {
+         "n": int(len(df)),
+-        "label_counts": df["label"].value_counts(dropna=False).to_dict() if "label" in df.columns else {},
++        "label_counts": (
++            df["label"].value_counts(dropna=False).to_dict() if "label" in df.columns else {}
++        ),
+     }
+     return out
+ 
+ 
+ def log_stats(cfg: OracleConfig) -> Dict[str, object]:
+     if not cfg.log_path.exists():
+-        return {"n": 0}
++        return {"n": 0, "by_event": []}
++
++    if duckdb is None:
++        try:
++            df = pd.read_json(cfg.log_path, lines=True)
++        except Exception:
++            df = pd.DataFrame()
++
++        if df.empty:
++            return {"n": 0, "by_event": []}
++
++        if "event" in df.columns:
++            vc = df["event"].value_counts(dropna=False)
++            by_event = [{"event": str(e), "n": int(k)} for e, k in vc.items()]
++        else:
++            by_event = []
++
++        return {"n": int(len(df)), "by_event": by_event}
++
+     con = duckdb.connect(database=":memory:")
+     con.execute("CREATE TABLE logs AS SELECT * FROM read_json_auto(?)", [str(cfg.log_path)])
+     n = int(con.execute("SELECT COUNT(*) FROM logs").fetchone()[0])
+-    by_event = con.execute("SELECT event, COUNT(*) AS n FROM logs GROUP BY event ORDER BY n DESC").fetchall()
++    by_event = con.execute(
++        "SELECT event, COUNT(*) AS n FROM logs GROUP BY event ORDER BY n DESC"
++    ).fetchall()
+     return {"n": n, "by_event": [{"event": e, "n": int(k)} for e, k in by_event]}
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/train.py /mnt/data/AstroOracle_v12/src/astrooracle/train.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/train.py	2026-02-09 10:57:00.328194677 +0000
++++ /mnt/data/AstroOracle_v12/src/astrooracle/train.py	2026-02-09 10:56:16.011034362 +0000
+@@ -1,14 +1,12 @@
+ from __future__ import annotations
+ 
+ import json
+-from dataclasses import asdict
+-from pathlib import Path
+-from typing import Dict, Tuple
++from typing import Dict
+ 
+ import numpy as np
+ import pandas as pd
+-from sklearn.model_selection import train_test_split
+ from sklearn.metrics import classification_report, confusion_matrix
++from sklearn.model_selection import train_test_split
+ 
+ from .annotations import read_annotations
+ from .config import OracleConfig
+@@ -52,7 +50,14 @@
+ 
+     X, feat_names, _ = build_feature_matrix(df)
+ 
+-    Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.2, random_state=7, stratify=y if len(np.unique(y)) > 1 else None)
++    stratify = y if len(np.unique(y)) > 1 else None
++    Xtr, Xte, ytr, yte = train_test_split(
++        X,
++        y,
++        test_size=0.2,
++        random_state=7,
++        stratify=stratify,
++    )
+ 
+     model = train_ensemble(Xtr, ytr, classes=classes, n_models=5, seed=7)
+     probs = model.predict_proba(Xte)
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/ui_notebook.py /mnt/data/AstroOracle_v12/src/astrooracle/ui_notebook.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/ui_notebook.py	2026-02-09 10:57:00.328655222 +0000
++++ /mnt/data/AstroOracle_v12/src/astrooracle/ui_notebook.py	2026-02-09 10:56:16.011429746 +0000
+@@ -1,14 +1,14 @@
+ from __future__ import annotations
+ 
+ import json
+-from typing import Callable, Any, Dict, List
++from typing import Any, Callable, Dict, List
+ 
+ import numpy as np
+ import pandas as pd
+ 
+ try:
+     import ipywidgets as w
+-    from IPython.display import display, clear_output
++    from IPython.display import clear_output, display
+ except Exception:  # pragma: no cover
+     w = None  # type: ignore
+     display = None  # type: ignore
+@@ -34,9 +34,11 @@
+         fetch_cutouts_fn: Callable[[float, float, OracleConfig], Any],
+         render_fn: Callable[[Any, str], None],
+         append_annotations_fn: Callable[[OracleConfig, List[Dict[str, Any]]], None],
+-    ):
++    ) -> None:
+         if w is None:
+-            raise RuntimeError("ipywidgets not installed. Install extras: pip install -e '.[notebook]'")
++            raise RuntimeError(
++                "ipywidgets not installed. Install extras: pip install -e '.[notebook]'"
++            )
+ 
+         self.cfg = cfg
+         self.load_candidates = load_candidates_fn
+@@ -49,7 +51,10 @@
+         self.idx = 0
+ 
+         self.title = w.HTML("")
+-        self.comment = w.Textarea(description="Commentaire", layout=w.Layout(width="100%", height="80px"))
++        self.comment = w.Textarea(
++            description="Commentaire",
++            layout=w.Layout(width="100%", height="80px"),
++        )
+         self.next_btn = w.Button(description="Next")
+         self.reload_btn = w.Button(description="Reload candidates", button_style="info")
+         self.out = w.Output()
+@@ -68,7 +73,7 @@
+ 
+         self.on_reload()
+ 
+-    def on_reload(self):
++    def on_reload(self) -> None:
+         df = self.load_candidates(self.cfg)
+         if df.empty:
+             self.batch = pd.DataFrame()
+@@ -81,7 +86,7 @@
+         self.idx = 0
+         self.show_current()
+ 
+-    def show_current(self):
++    def show_current(self) -> None:
+         if self.batch.empty or self.idx >= len(self.batch):
+             with self.out:
+                 clear_output()
+@@ -89,18 +94,19 @@
+             return
+ 
+         row = self.batch.iloc[self.idx]
+-        title = (
+-            f"ID: {row['id']} | score: {float(row['anomaly_score']):.4f} | "
+-            f"RA: {float(row['ra']):.5f} Dec: {float(row['dec']):.5f}"
+-        )
++        cid = row["id"]
++        ra = float(row["ra"])
++        dec = float(row["dec"])
++        score = float(row["anomaly_score"])
++        title = f"ID: {cid} | score: {score:.4f} | RA: {ra:.5f} Dec: {dec:.5f}"
+         self.title.value = f"<b>{title}</b>"
+ 
+-        cutouts = self.fetch_cutouts(float(row["ra"]), float(row["dec"]), self.cfg)
++        cutouts = self.fetch_cutouts(ra, dec, self.cfg)
+         with self.out:
+             clear_output()
+             self.render(cutouts, title)
+ 
+-    def on_label(self, label: str):
++    def on_label(self, label: str) -> None:
+         if label == "skip":
+             self.on_next()
+             return
+@@ -122,6 +128,6 @@
+         self.comment.value = ""
+         self.on_next()
+ 
+-    def on_next(self):
++    def on_next(self) -> None:
+         self.idx += 1
+         self.show_current()
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/viz_matplotlib.py /mnt/data/AstroOracle_v12/src/astrooracle/viz_matplotlib.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/src/astrooracle/viz_matplotlib.py	2026-02-09 10:57:00.329272176 +0000
++++ /mnt/data/AstroOracle_v12/src/astrooracle/viz_matplotlib.py	2026-02-09 10:56:16.011985682 +0000
+@@ -3,13 +3,31 @@
+ from pathlib import Path
+ from typing import List, Optional, Tuple
+ 
+-import numpy as np
+ import matplotlib.pyplot as plt
+-from astropy.visualization import ZScaleInterval, ImageNormalize
++import numpy as np
++from matplotlib.colors import Normalize
++
++try:
++    from astropy.visualization import ImageNormalize, ZScaleInterval  # type: ignore
++except Exception:  # pragma: no cover
++    ImageNormalize = None  # type: ignore
++    ZScaleInterval = None  # type: ignore
+ 
+ from .config import OracleConfig
+ 
+ 
++def _fallback_norm(data: np.ndarray) -> Normalize:
++    arr = np.asarray(data, dtype=float)
++    finite = arr[np.isfinite(arr)]
++    if finite.size == 0:
++        return Normalize(vmin=0.0, vmax=1.0)
++    lo = float(np.percentile(finite, 1))
++    hi = float(np.percentile(finite, 99))
++    if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
++        hi = lo + 1.0
++    return Normalize(vmin=lo, vmax=hi)
++
++
+ def render_cutouts_matplotlib(
+     cutouts: List[Tuple[str, np.ndarray]],
+     title: str,
+@@ -26,7 +44,10 @@
+         axes = [axes]
+ 
+     for ax, (survey, data) in zip(axes, cutouts):
+-        norm = ImageNormalize(data, interval=ZScaleInterval())
++        if ImageNormalize is not None and ZScaleInterval is not None:
++            norm = ImageNormalize(data, interval=ZScaleInterval())
++        else:
++            norm = _fallback_norm(data)
+         ax.imshow(data, cmap="gray", norm=norm, origin="lower")
+         ax.set_title(survey, fontsize=9)
+         ax.axis("off")
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/templates/batch_index.html /mnt/data/AstroOracle_v12/templates/batch_index.html
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/templates/batch_index.html	2026-02-09 10:57:00.330849430 +0000
++++ /mnt/data/AstroOracle_v12/templates/batch_index.html	2026-02-09 10:56:16.014687699 +0000
+@@ -26,6 +26,8 @@
+ <div id="root"></div>
+ 
+ <script>
++const EMBEDDED_CANDIDATES = null; // __CANDIDATES_JSON__
++
+ const LABELS = [
+   ["real_anomaly", "Réel"],
+   ["artefact", "Artefact"],
+@@ -135,11 +137,23 @@
+   }
+ }
+ 
++async function loadCandidates(){
++  if(Array.isArray(EMBEDDED_CANDIDATES)){
++    return EMBEDDED_CANDIDATES;
++  }
++  try{
++    const resp = await fetch("candidates.json");
++    return await resp.json();
++  }catch(e){
++    setStatus("failed to load candidates.json (open via http:// ?)");
++    return [];
++  }
++}
++
+ async function render(){
+   const root = document.getElementById("root");
+   root.innerHTML = "";
+-  const resp = await fetch("candidates.json");
+-  const cs = await resp.json();
++  const cs = await loadCandidates();
+   cs.forEach(c => root.appendChild(renderCard(c)));
+ }
+ render();
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/tests/test_ranking.py /mnt/data/AstroOracle_v12/tests/test_ranking.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/tests/test_ranking.py	2026-02-09 10:57:00.332781143 +0000
++++ /mnt/data/AstroOracle_v12/tests/test_ranking.py	2026-02-09 10:56:16.015346919 +0000
+@@ -2,12 +2,12 @@
+ import pandas as pd
+ 
+ from astrooracle.config import OracleConfig, RankingConfig
+-from astrooracle.ranking import rank_candidates, select_batch
+-from astrooracle.ml.model import train_ensemble
+ from astrooracle.ml.features import build_feature_matrix
++from astrooracle.ml.model import train_ensemble
++from astrooracle.ranking import rank_candidates, select_batch
+ 
+ 
+-def test_rank_and_select_runs():
++def test_rank_and_select_runs() -> None:
+     cfg = OracleConfig.default()
+     cfg = OracleConfig(**{**cfg.__dict__, "ranking": RankingConfig.default()})
+ 
+@@ -24,12 +24,16 @@
+         }
+     )
+ 
+-    # train a tiny model
+     X, _, _ = build_feature_matrix(df)
+     y = np.array([0, 1, 2, 3])
+-    model = train_ensemble(X, y, classes=["real_anomaly", "artefact", "known", "new_type", "unsure"], n_models=2)
++    model = train_ensemble(
++        X,
++        y,
++        classes=["real_anomaly", "artefact", "known", "new_type", "unsure"],
++        n_models=2,
++    )
+ 
+-    ranked, meta = rank_candidates(df.drop(columns=["label"]), cfg, model=model)
++    ranked, _meta = rank_candidates(df.drop(columns=["label"]), cfg, model=model)
+     assert len(ranked) == 4
+     assert "rank_score" in ranked.columns
+     batch = select_batch(ranked, cfg, k=2)
+diff -ruN '--exclude=__pycache__' '--exclude=.pytest_cache' '--exclude=.mypy_cache' '--exclude=.ruff_cache' '--exclude=.coverage' '--exclude=*.pyc' /mnt/data/AstroOracle_orig/AstroOracle-main/tests/test_select.py /mnt/data/AstroOracle_v12/tests/test_select.py
+--- /mnt/data/AstroOracle_orig/AstroOracle-main/tests/test_select.py	2026-02-09 10:57:00.333309310 +0000
++++ /mnt/data/AstroOracle_v12/tests/test_select.py	2026-02-09 10:56:16.015844513 +0000
+@@ -1,17 +1,21 @@
+ import numpy as np
+ import pandas as pd
++
+ from astrooracle.config import OracleConfig
+ from astrooracle.core import select_candidates
+ 
+-def test_select_candidates_basic():
++
++def test_select_candidates_basic() -> None:
+     cfg = OracleConfig.default()
+     cfg = OracleConfig(**{**cfg.__dict__, "n_query": 5})
+-    df = pd.DataFrame({
+-        "id": [f"a{i}" for i in range(10)],
+-        "ra": np.linspace(0, 1, 10),
+-        "dec": np.linspace(0, 1, 10),
+-        "anomaly_score": np.linspace(-2, 2, 10),
+-    })
++    df = pd.DataFrame(
++        {
++            "id": [f"a{i}" for i in range(10)],
++            "ra": np.linspace(0, 1, 10),
++            "dec": np.linspace(0, 1, 10),
++            "anomaly_score": np.linspace(-2, 2, 10),
++        }
++    )
+     top = select_candidates(df, cfg)
+     assert len(top) == 5
+     assert "rank_score" in top.columns

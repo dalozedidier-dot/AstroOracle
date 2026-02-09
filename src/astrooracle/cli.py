@@ -97,7 +97,13 @@ def annotate_batch(
     session_id: str | None = None,
     annotator_id: str | None = None,
 ) -> None:
-    label_map = {"r": "real_anomaly", "a": "artefact", "c": "known", "j": "new_type", "u": "unsure"}
+    label_map = {
+        "r": "real_anomaly",
+        "a": "artefact",
+        "c": "known",
+        "j": "new_type",
+        "u": "unsure",
+    }
 
     new_rows = []
     has_emb = "embedding" in top.columns
@@ -173,7 +179,9 @@ def cmd_run(args: argparse.Namespace) -> None:
         session_id=session_id,
         annotator_id=annotator_id,
     )
-    print(f"AstroOracle running. candidates={cfg.candidates_path} interval={cfg.check_interval_s}s")
+    print(
+        f"AstroOracle running. candidates={cfg.candidates_path} interval={cfg.check_interval_s}s",
+    )
 
     while True:
         try:
