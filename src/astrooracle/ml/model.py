@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import List
+import inspect
 
 import numpy as np
 from sklearn.calibration import CalibratedClassifierCV
@@ -57,7 +58,15 @@ def train_ensemble(
 
         Xm, ym = X[idx], y[idx]
 
-        base = LogisticRegression(max_iter=2000, multi_class="auto")
+        lr_kwargs = {"max_iter": 2000}
+        try:
+            sig = inspect.signature(LogisticRegression)
+            if "multi_class" in sig.parameters:
+                lr_kwargs["multi_class"] = "auto"
+        except (TypeError, ValueError):
+            # Extremely old / nonstandard sklearn builds may not expose signatures
+            pass
+        base = LogisticRegression(**lr_kwargs)
 
         unique, counts = np.unique(ym, return_counts=True)
         min_count = int(counts.min()) if len(counts) else 0

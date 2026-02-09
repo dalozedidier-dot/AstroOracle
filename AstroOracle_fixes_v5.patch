@@ -1,0 +1,469 @@
+--- a/src/astrooracle/api.py
++++ b/src/astrooracle/api.py
+@@ -1,10 +1,9 @@
+ from __future__ import annotations
+
+ 
+
+-from pathlib import Path
+
+ from typing import List, Optional
+
+ 
+
+ import pandas as pd
+
+-from fastapi import FastAPI, HTTPException
+
++from fastapi import FastAPI
+
+ from pydantic import BaseModel
+
+ 
+
+ from .config import OracleConfig
+
+
+--- a/src/astrooracle/cli.py
++++ b/src/astrooracle/cli.py
+@@ -203,8 +203,8 @@
+ def cmd_stats(args: argparse.Namespace) -> None:
+
+     cfg = _make_cfg(args)
+
+     a = annotation_stats(cfg)
+
+-    l = log_stats(cfg)
+
+-    print(json.dumps({"annotations": a, "logs": l}, indent=2, ensure_ascii=False))
+
++    logs_stats = log_stats(cfg)
+
++    print(json.dumps({"annotations": a, "logs": logs_stats}, indent=2, ensure_ascii=False))
+
+ 
+
+ 
+
+ def cmd_serve(args: argparse.Namespace) -> None:
+
+
+--- a/src/astrooracle/core.py
++++ b/src/astrooracle/core.py
+@@ -32,10 +32,15 @@
+ 
+
+ 
+
+ def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tuple[str, np.ndarray]]:
+
+-    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {"1", "true", "yes"}
+
+-    results: List[Tuple[str, np.ndarray]] = []
+
++    """Fetch survey cutouts.
+
+ 
+
+-    if offline:
+
++    Design constraint: the default installation must remain functional without optional
+
++    astronomy dependencies. If optional deps are missing, fall back to deterministic
+
++    synthetic cutouts (offline mode).
+
++    """
+
++
+
++    def _synthetic_cutouts() -> List[Tuple[str, np.ndarray]]:
+
++        results_local: List[Tuple[str, np.ndarray]] = []
+
+         for survey in cfg.surveys:
+
+             key = f"{ra_deg:.6f}|{dec_deg:.6f}|{survey}"
+
+             seed = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
+
+@@ -52,13 +57,22 @@
+             noise = rng.normal(0, 0.05, size=(n, n))
+
+             bg = rng.normal(0, 0.01, size=(n, n))
+
+             img = (0.8 * blob + noise + bg).astype(float)
+
+-            results.append((survey, img))
+
+-        return results
+
++            results_local.append((survey, img))
+
++        return results_local
+
+ 
+
+-    from astropy import units as u
+
+-    from astropy.coordinates import SkyCoord
+
+-    from astroquery.skyview import SkyView
+
++    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {"1", "true", "yes"}
+
++    if offline:
+
++        return _synthetic_cutouts()
+
+ 
+
++    # Optional dependency path: if deps missing, degrade to offline synthetic.
+
++    try:
+
++        from astropy import units as u
+
++        from astropy.coordinates import SkyCoord
+
++        from astroquery.skyview import SkyView
+
++    except ModuleNotFoundError:
+
++        return _synthetic_cutouts()
+
++
+
++    results: List[Tuple[str, np.ndarray]] = []
+
+     coord = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg)
+
+     for survey in cfg.surveys:
+
+         try:
+
+@@ -76,4 +90,9 @@
+             results.append((survey, data))
+
+         except Exception:
+
+             continue
+
++
+
++    # If the online path returned nothing (network / service / rate-limit), do not hard-fail.
+
++    if not results:
+
++        return _synthetic_cutouts()
+
++
+
+     return results
+
+
+--- a/src/astrooracle/diversity.py
++++ b/src/astrooracle/diversity.py
+@@ -1,6 +1,6 @@
+ from __future__ import annotations
+
+ 
+
+-from typing import List, Optional, Tuple
+
++from typing import List, Optional
+
+ 
+
+ import numpy as np
+
+ 
+
+
+--- a/src/astrooracle/ml/features.py
++++ b/src/astrooracle/ml/features.py
+@@ -1,6 +1,6 @@
+ from __future__ import annotations
+
+ 
+
+-from typing import Dict, List, Optional, Tuple
+
++from typing import List, Optional, Tuple
+
+ 
+
+ import numpy as np
+
+ import pandas as pd
+
+
+--- a/src/astrooracle/ml/model.py
++++ b/src/astrooracle/ml/model.py
+@@ -2,6 +2,7 @@
+ 
+
+ from dataclasses import dataclass
+
+ from typing import List
+
++import inspect
+
+ 
+
+ import numpy as np
+
+ from sklearn.calibration import CalibratedClassifierCV
+
+@@ -57,7 +58,15 @@
+ 
+
+         Xm, ym = X[idx], y[idx]
+
+ 
+
+-        base = LogisticRegression(max_iter=2000, multi_class="auto")
+
++        lr_kwargs = {"max_iter": 2000}
+
++        try:
+
++            sig = inspect.signature(LogisticRegression)
+
++            if "multi_class" in sig.parameters:
+
++                lr_kwargs["multi_class"] = "auto"
+
++        except (TypeError, ValueError):
+
++            # Extremely old / nonstandard sklearn builds may not expose signatures
+
++            pass
+
++        base = LogisticRegression(**lr_kwargs)
+
+ 
+
+         unique, counts = np.unique(ym, return_counts=True)
+
+         min_count = int(counts.min()) if len(counts) else 0
+
+
+--- a/src/astrooracle/stats.py
++++ b/src/astrooracle/stats.py
+@@ -1,10 +1,14 @@
+ from __future__ import annotations
+
+ 
+
+-from pathlib import Path
+
+ from typing import Dict
+
+ 
+
+-import duckdb
+
+ import pandas as pd
+
++
+
++try:
+
++    # duckdb est un extra optionnel (.[stats]) : ne doit pas casser l'import du package
+
++    import duckdb  # type: ignore
+
++except Exception:  # pragma: no cover
+
++    duckdb = None  # type: ignore[assignment]
+
+ 
+
+ from .config import OracleConfig
+
+ 
+
+@@ -20,9 +24,31 @@
+     return out
+
+ 
+
+ 
+
++def _log_stats_fallback(cfg: OracleConfig) -> Dict[str, object]:
+
++    # JSON Lines / NDJSON
+
++    df = pd.read_json(cfg.log_path, lines=True)
+
++    n = int(len(df))
+
++    if "event" not in df.columns:
+
++        return {"n": n, "by_event": []}
+
++
+
++    vc = df["event"].value_counts(dropna=False)
+
++    by_event = []
+
++    for event, k in vc.items():
+
++        if pd.isna(event):
+
++            e_out = None
+
++        else:
+
++            e_out = str(event)
+
++        by_event.append({"event": e_out, "n": int(k)})
+
++    return {"n": n, "by_event": by_event}
+
++
+
++
+
+ def log_stats(cfg: OracleConfig) -> Dict[str, object]:
+
+     if not cfg.log_path.exists():
+
+         return {"n": 0}
+
++
+
++    if duckdb is None:
+
++        return _log_stats_fallback(cfg)
+
++
+
+     con = duckdb.connect(database=":memory:")
+
+     con.execute("CREATE TABLE logs AS SELECT * FROM read_json_auto(?)", [str(cfg.log_path)])
+
+     n = int(con.execute("SELECT COUNT(*) FROM logs").fetchone()[0])
+
+
+--- a/src/astrooracle/train.py
++++ b/src/astrooracle/train.py
+@@ -1,9 +1,7 @@
+ from __future__ import annotations
+
+ 
+
+ import json
+
+-from dataclasses import asdict
+
+-from pathlib import Path
+
+-from typing import Dict, Tuple
+
++from typing import Dict
+
+ 
+
+ import numpy as np
+
+ import pandas as pd
+
+
+--- a/src/astrooracle/viz_matplotlib.py
++++ b/src/astrooracle/viz_matplotlib.py
+@@ -5,9 +5,33 @@
+ 
+
+ import numpy as np
+
+ import matplotlib.pyplot as plt
+
+-from astropy.visualization import ZScaleInterval, ImageNormalize
+
++import matplotlib.colors as mcolors
+
++
+
++try:
+
++    # astropy est un extra optionnel (.[astro]) : ne doit pas casser l'import du package
+
++    from astropy.visualization import ZScaleInterval, ImageNormalize
+
++except Exception:  # pragma: no cover
+
++    ZScaleInterval = None  # type: ignore[assignment]
+
++    ImageNormalize = None  # type: ignore[assignment]
+
+ 
+
+ from .config import OracleConfig
+
++
+
++
+
++def _fallback_norm(data: np.ndarray) -> Optional[mcolors.Normalize]:
+
++    """Normalisation robuste sans dépendance astropy.
+
++
+
++    - utilise des percentiles (1, 99) pour limiter l'impact des outliers
+
++    - retourne None si les bornes sont invalides (NaN, inf, bornes égales)
+
++    """
+
++    try:
+
++        lo, hi = np.nanpercentile(data, [1, 99])
+
++    except Exception:
+
++        return None
+
++    if not (np.isfinite(lo) and np.isfinite(hi)):
+
++        return None
+
++    if float(lo) == float(hi):
+
++        return None
+
++    return mcolors.Normalize(vmin=float(lo), vmax=float(hi), clip=True)
+
+ 
+
+ 
+
+ def render_cutouts_matplotlib(
+
+@@ -26,7 +50,11 @@
+         axes = [axes]
+
+ 
+
+     for ax, (survey, data) in zip(axes, cutouts):
+
+-        norm = ImageNormalize(data, interval=ZScaleInterval())
+
++        if ImageNormalize is not None and ZScaleInterval is not None:
+
++            norm = ImageNormalize(data, interval=ZScaleInterval())
+
++        else:
+
++            norm = _fallback_norm(data)
+
++
+
+         ax.imshow(data, cmap="gray", norm=norm, origin="lower")
+
+         ax.set_title(survey, fontsize=9)
+
+         ax.axis("off")
