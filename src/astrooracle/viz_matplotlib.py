@@ -11,21 +11,31 @@ from .config import OracleConfig
 
 try:
     from astropy.visualization import ImageNormalize, ZScaleInterval
+
+    _HAS_ASTROPY = True
 except Exception:  # pragma: no cover
-    ImageNormalize = None  # type: ignore
-    ZScaleInterval = None  # type: ignore
+    ImageNormalize = None  # type: ignore[assignment]
+    ZScaleInterval = None  # type: ignore[assignment]
+    _HAS_ASTROPY = False
 
 
-def _fallback_norm(data: np.ndarray) -> Normalize:
-    arr = np.asarray(data, dtype=float)
-    finite = arr[np.isfinite(arr)]
+def _fallback_norm(data: np.ndarray) -> Normalize | None:
+    finite = np.asarray(data[np.isfinite(data)], dtype=float)
     if finite.size == 0:
-        return Normalize(vmin=0.0, vmax=1.0, clip=True)
-    lo = float(np.percentile(finite, 1))
-    hi = float(np.percentile(finite, 99))
-    if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
-        hi = lo + 1.0
-    return Normalize(vmin=lo, vmax=hi, clip=True)
+        return None
+
+    try:
+        vmin, vmax = np.nanpercentile(finite, [1, 99])
+    except Exception:
+        vmin, vmax = float(np.nanmin(finite)), float(np.nanmax(finite))
+
+    if not np.isfinite(vmin) or not np.isfinite(vmax):
+        return None
+    if vmin == vmax:
+        vmin -= 1.0
+        vmax += 1.0
+
+    return Normalize(vmin=vmin, vmax=vmax, clip=True)
 
 
 def render_cutouts_matplotlib(
@@ -44,10 +54,11 @@ def render_cutouts_matplotlib(
         axes = [axes]
 
     for ax, (survey, data) in zip(axes, cutouts):
-        if ImageNormalize is not None and ZScaleInterval is not None:
+        if _HAS_ASTROPY:
             norm = ImageNormalize(data, interval=ZScaleInterval())
         else:
             norm = _fallback_norm(data)
+
         ax.imshow(data, cmap="gray", norm=norm, origin="lower")
         ax.set_title(survey, fontsize=9)
         ax.axis("off")
@@ -58,9 +69,4 @@ def render_cutouts_matplotlib(
     if save_path is not None:
         save_path.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(save_path, dpi=150)
-
-    if not cfg.no_gui:
-        plt.show(block=False)
-        plt.pause(0.25)
-
     plt.close(fig)

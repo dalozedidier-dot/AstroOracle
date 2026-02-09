@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -33,9 +33,7 @@ def kcenter_greedy(emb: np.ndarray, k: int, seed_idx: Optional[int] = None) -> L
     return selected
 
 
-def dpp_greedy(
-    emb: np.ndarray, k: int, gamma: float = 1.0, eps: float = 1e-12
-) -> List[int]:
+def dpp_greedy(emb: np.ndarray, k: int, gamma: float = 1.0, eps: float = 1e-12) -> List[int]:
     # Greedy MAP for an RBF kernel DPP on cosine distance.
     n = emb.shape[0]
     if n == 0 or k <= 0:

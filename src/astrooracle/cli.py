@@ -9,29 +9,21 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .annotations import (
-    append_annotations,
-    count_labels,
-    get_retrain_cursor,
-    set_retrain_cursor,
-)
-from .batch_html import generate_batch_html
 from .config import OracleConfig, RankingConfig
-from .core import fetch_cutouts, load_candidates, select_candidates
-from .logging_utils import log_event
-from .stats import annotation_stats, log_stats
-from .train import train_from_files
+from .core import load_candidates, select_candidates, fetch_cutouts
 from .viz_matplotlib import render_cutouts_matplotlib
+from .annotations import append_annotations, count_labels, get_retrain_cursor, set_retrain_cursor
+from .logging_utils import log_event
 from .watch import watch_candidates
+from .batch_html import generate_batch_html
+from .train import train_from_files
+from .stats import annotation_stats, log_stats
 
 
 def _make_cfg(args: argparse.Namespace) -> OracleConfig:
     cfg0 = OracleConfig.default()
     save_dir = Path(args.save_cutouts) if args.save_cutouts else None
-    if args.cutout_radius_arcmin is None:
-        cutout_radius = cfg0.cutout_radius_arcmin
-    else:
-        cutout_radius = float(args.cutout_radius_arcmin)
+    cutout_radius = cfg0.cutout_radius_arcmin if args.cutout_radius_arcmin is None else float(args.cutout_radius_arcmin)
 
     ranking = RankingConfig(
         strategy=str(args.acq),
@@ -62,56 +54,24 @@ def _make_cfg(args: argparse.Namespace) -> OracleConfig:
     )
 
 
-def maybe_retrain(
-    cfg: OracleConfig,
-    session_id: str | None = None,
-    annotator_id: str | None = None,
-) -> None:
+def maybe_retrain(cfg: OracleConfig, session_id: str | None = None, annotator_id: str | None = None) -> None:
     total = count_labels(cfg)
     cursor = get_retrain_cursor(cfg)
     new_since = total - cursor
-    if new_since < cfg.min_new_labels_for_retrain:
-        return
-
-    print(f"Retrain triggered: {new_since} new labels.")
-    log_event(
-        cfg,
-        {"event": "retrain_triggered", "new_labels": new_since, "total_labels": total},
-        session_id=session_id,
-        annotator_id=annotator_id,
-    )
-    try:
-        subprocess.run(["python", str(cfg.retrain_script)], check=True)
-        set_retrain_cursor(cfg, total)
-        log_event(
-            cfg,
-            {"event": "retrain_success"},
-            session_id=session_id,
-            annotator_id=annotator_id,
-        )
-    except Exception as e:
-        log_event(
-            cfg,
-            {"event": "retrain_failed", "error": str(e)},
-            session_id=session_id,
-            annotator_id=annotator_id,
-        )
-        print(f"Retrain failed: {e}")
+    if new_since >= cfg.min_new_labels_for_retrain:
+        print(f"Retrain triggered: {new_since} new labels.")
+        log_event(cfg, {"event": "retrain_triggered", "new_labels": new_since, "total_labels": total}, session_id=session_id, annotator_id=annotator_id)
+        try:
+            subprocess.run(["python", str(cfg.retrain_script)], check=True)
+            set_retrain_cursor(cfg, total)
+            log_event(cfg, {"event": "retrain_success"}, session_id=session_id, annotator_id=annotator_id)
+        except Exception as e:
+            log_event(cfg, {"event": "retrain_failed", "error": str(e)}, session_id=session_id, annotator_id=annotator_id)
+            print(f"Retrain failed: {e}")
 
 
-def annotate_batch(
-    cfg: OracleConfig,
-    top: pd.DataFrame,
-    session_id: str | None = None,
-    annotator_id: str | None = None,
-) -> None:
-    label_map = {
-        "r": "real_anomaly",
-        "a": "artefact",
-        "c": "known",
-        "j": "new_type",
-        "u": "unsure",
-    }
+def annotate_batch(cfg: OracleConfig, top: pd.DataFrame, session_id: str | None = None, annotator_id: str | None = None) -> None:
+    label_map = {"r": "real_anomaly", "a": "artefact", "c": "known", "j": "new_type", "u": "unsure"}
 
     new_rows = []
     has_emb = "embedding" in top.columns
@@ -135,14 +95,7 @@ def annotate_batch(
         render_cutouts_matplotlib(cutouts, title, cfg, save_path=save_path)
 
         while True:
-            choice = (
-                input(
-                    "Label ? [r]éel [a]rtefact [c]onnu [j]nouveau type "
-                    "[u]incertain [s]kip -> "
-                )
-                .strip()
-                .lower()
-            )
+            choice = input("Label ? [r]éel [a]rtefact [c]onnu [j]nouveau type [u]incertain [s]kip -> ").strip().lower()
             if choice in {"r", "a", "c", "j", "u", "s"}:
                 break
 
@@ -165,20 +118,13 @@ def annotate_batch(
         }
 
         if has_emb and row.get("embedding", None) is not None:
-            entry["embedding"] = json.dumps(
-                np.asarray(row["embedding"], dtype=float).tolist()
-            )
+            entry["embedding"] = json.dumps(np.asarray(row["embedding"], dtype=float).tolist())
 
         new_rows.append(entry)
 
     if new_rows:
         append_annotations(cfg, new_rows)
-        log_event(
-            cfg,
-            {"event": "new_annotations", "count": len(new_rows)},
-            session_id=session_id,
-            annotator_id=annotator_id,
-        )
+        log_event(cfg, {"event": "new_annotations", "count": len(new_rows)}, session_id=session_id, annotator_id=annotator_id)
         maybe_retrain(cfg, session_id=session_id, annotator_id=annotator_id)
 
 
@@ -186,16 +132,8 @@ def cmd_run(args: argparse.Namespace) -> None:
     cfg = _make_cfg(args)
     session_id = args.session_id
     annotator_id = args.annotator_id
-    log_event(
-        cfg,
-        {"event": "oracle_started", "mode": "poll"},
-        session_id=session_id,
-        annotator_id=annotator_id,
-    )
-    print(
-        f"AstroOracle running. candidates={cfg.candidates_path} "
-        f"interval={cfg.check_interval_s}s"
-    )
+    log_event(cfg, {"event": "oracle_started", "mode": "poll"}, session_id=session_id, annotator_id=annotator_id)
+    print(f"AstroOracle running. candidates={cfg.candidates_path} interval={cfg.check_interval_s}s")
 
     while True:
         try:
@@ -205,21 +143,11 @@ def cmd_run(args: argparse.Namespace) -> None:
                 if not top.empty:
                     annotate_batch(cfg, top, session_id=session_id, annotator_id=annotator_id)
         except KeyboardInterrupt:
-            log_event(
-                cfg,
-                {"event": "oracle_stopped"},
-                session_id=session_id,
-                annotator_id=annotator_id,
-            )
+            log_event(cfg, {"event": "oracle_stopped"}, session_id=session_id, annotator_id=annotator_id)
             print("Stopped.")
             break
         except Exception as e:
-            log_event(
-                cfg,
-                {"event": "error", "msg": str(e)},
-                session_id=session_id,
-                annotator_id=annotator_id,
-            )
+            log_event(cfg, {"event": "error", "msg": str(e)}, session_id=session_id, annotator_id=annotator_id)
             print(f"Error: {e}")
 
         time.sleep(cfg.check_interval_s)
@@ -229,15 +157,10 @@ def cmd_watch(args: argparse.Namespace) -> None:
     cfg = _make_cfg(args)
     session_id = args.session_id
     annotator_id = args.annotator_id
-    log_event(
-        cfg,
-        {"event": "oracle_started", "mode": "watch"},
-        session_id=session_id,
-        annotator_id=annotator_id,
-    )
+    log_event(cfg, {"event": "oracle_started", "mode": "watch"}, session_id=session_id, annotator_id=annotator_id)
     print(f"AstroOracle watching {cfg.candidates_path}")
 
-    def _on_change() -> None:
+    def _on_change():
         try:
             df = load_candidates(cfg)
             if not df.empty:
@@ -245,12 +168,7 @@ def cmd_watch(args: argparse.Namespace) -> None:
                 if not top.empty:
                     annotate_batch(cfg, top, session_id=session_id, annotator_id=annotator_id)
         except Exception as e:
-            log_event(
-                cfg,
-                {"event": "error", "msg": str(e)},
-                session_id=session_id,
-                annotator_id=annotator_id,
-            )
+            log_event(cfg, {"event": "error", "msg": str(e)}, session_id=session_id, annotator_id=annotator_id)
             print(f"Error: {e}")
 
     watch_candidates(cfg.candidates_path, _on_change)
@@ -271,43 +189,27 @@ def cmd_batch_html(args: argparse.Namespace) -> None:
         return
 
     generate_batch_html(cfg2, top, out_dir)
-    log_event(
-        cfg2,
-        {"event": "batch_html_generated", "out_dir": str(out_dir), "count": len(top)},
-    )
+    log_event(cfg2, {"event": "batch_html_generated", "out_dir": str(out_dir), "count": len(top)})
     print(f"Batch HTML written to: {out_dir}/index.html")
 
 
 def cmd_train(args: argparse.Namespace) -> None:
     cfg = _make_cfg(args)
     metrics = train_from_files(cfg)
-    log_event(
-        cfg,
-        {
-            "event": "train",
-            "metrics": {"ece": metrics.get("ece"), "n_train": metrics.get("n_train")},
-        },
-    )
+    log_event(cfg, {"event": "train", "metrics": {"ece": metrics.get("ece"), "n_train": metrics.get("n_train")}})
     print(json.dumps(metrics, indent=2, ensure_ascii=False))
 
 
 def cmd_stats(args: argparse.Namespace) -> None:
     cfg = _make_cfg(args)
-    annotations = annotation_stats(cfg)
-    logs_stats = log_stats(cfg)
-    print(
-        json.dumps(
-            {"annotations": annotations, "logs": logs_stats},
-            indent=2,
-            ensure_ascii=False,
-        )
-    )
+    a = annotation_stats(cfg)
+    l = log_stats(cfg)
+    print(json.dumps({"annotations": a, "logs": l}, indent=2, ensure_ascii=False))
 
 
 def cmd_serve(args: argparse.Namespace) -> None:
     cfg = _make_cfg(args)
     from .api import create_app
-
     import uvicorn
 
     app = create_app(cfg)
@@ -318,7 +220,7 @@ def main() -> None:
     p = argparse.ArgumentParser(prog="astrooracle")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    def add_common(sp: argparse.ArgumentParser) -> None:
+    def add_common(sp):
         sp.add_argument("--candidates", default="candidates.parquet")
         sp.add_argument("--annotations", default="annotations.csv")
         sp.add_argument("--log", default="oracle_log.jsonl")
@@ -329,35 +231,21 @@ def main() -> None:
         sp.add_argument("--n-query", type=int, default=6)
         sp.add_argument("--pixels", type=int, default=400)
         sp.add_argument("--cutout-radius-arcmin", type=float, default=None)
-        sp.add_argument(
-            "--survey", action="append", default=["DSS2 Red", "2MASS J"]
-        )
+        sp.add_argument("--survey", action="append", default=["DSS2 Red", "2MASS J"])
         sp.add_argument("--no-gui", action="store_true")
         sp.add_argument("--save-cutouts", default=None)
-        sp.add_argument(
-            "--offline", action="store_true", help="Use synthetic cutouts (no network)."
-        )
+        sp.add_argument("--offline", action="store_true", help="Use synthetic cutouts (no network).")
 
         sp.add_argument("--session-id", default=None)
         sp.add_argument("--annotator-id", default=None)
 
-        sp.add_argument(
-            "--acq",
-            default="entropy",
-            choices=["entropy", "margin", "bald", "badge"],
-        )
-        sp.add_argument(
-            "--diversity",
-            default="kcenter",
-            choices=["kcenter", "dpp", "none"],
-        )
+        sp.add_argument("--acq", default="entropy", choices=["entropy", "margin", "bald", "badge"])
+        sp.add_argument("--diversity", default="kcenter", choices=["kcenter", "dpp", "none"])
         sp.add_argument("--w-anomaly", type=float, default=0.35)
         sp.add_argument("--w-acq", type=float, default=0.35)
         sp.add_argument("--w-div", type=float, default=0.20)
         sp.add_argument("--w-prior", type=float, default=0.10)
         sp.add_argument("--acq-temp", type=float, default=1.0)
-
-        return None
 
     sp_run = sub.add_parser("run", help="Poll candidates file and annotate in CLI.")
     add_common(sp_run)
@@ -372,9 +260,7 @@ def main() -> None:
     sp_html.add_argument("--out-dir", required=True)
     sp_html.set_defaults(fn=cmd_batch_html)
 
-    sp_train = sub.add_parser(
-        "train", help="Train/update the ensemble model from annotations."
-    )
+    sp_train = sub.add_parser("train", help="Train/update the ensemble model from annotations.")
     add_common(sp_train)
     sp_train.set_defaults(fn=cmd_train)
 

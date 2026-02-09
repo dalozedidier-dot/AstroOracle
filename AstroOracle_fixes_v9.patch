@@ -1,0 +1,555 @@
+--- a/scripts/retrain_model.py
++++ b/scripts/retrain_model.py
+@@ -8,10 +8,14 @@
+ def main() -> None:
+
+     cfg = OracleConfig.default()
+
+     metrics = train_from_files(cfg)
+
++
+
++    metrics_path = cfg.model_path.with_suffix(".metrics.json")
+
++    ece = metrics.get("ece")
+
++
+
+     print("Model trained.")
+
+     print(f"Saved: {cfg.model_path}")
+
+-    print(f"Metrics: {cfg.model_path.with_suffix('.metrics.json')}")
+
+-    print(f"ECE: {metrics.get('ece')}")
+
++    print(f"Metrics: {metrics_path}")
+
++    print(f"ECE: {ece}")
+
+ 
+
+ 
+
+ if __name__ == "__main__":
+
+
+--- a/src/astrooracle/core.py
++++ b/src/astrooracle/core.py
+@@ -31,29 +31,76 @@
+     return select_batch(ranked, cfg, k=cfg.n_query)
+
+ 
+
+ 
+
++def _synthetic_cutouts(
+
++    ra_deg: float, dec_deg: float, cfg: OracleConfig
+
++) -> List[Tuple[str, np.ndarray]]:
+
++    results: List[Tuple[str, np.ndarray]] = []
+
++    for survey in cfg.surveys:
+
++        key = f"{ra_deg:.6f}|{dec_deg:.6f}|{survey}"
+
++        seed = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
+
++        rng = np.random.default_rng(seed)
+
++
+
++        n = int(cfg.pixels)
+
++        yy, xx = np.mgrid[0:n, 0:n]
+
++        cx = rng.uniform(0.35 * n, 0.65 * n)
+
++        cy = rng.uniform(0.35 * n, 0.65 * n)
+
++        sx = rng.uniform(0.06 * n, 0.12 * n)
+
++        sy = rng.uniform(0.06 * n, 0.12 * n)
+
++
+
++        blob = np.exp(
+
++            -(
+
++                ((xx - cx) ** 2) / (2 * sx**2)
+
++                + ((yy - cy) ** 2) / (2 * sy**2)
+
++            )
+
++        )
+
++        noise = rng.normal(0, 0.05, size=(n, n))
+
++        bg = rng.normal(0, 0.01, size=(n, n))
+
++        img = (0.8 * blob + noise + bg).astype(float)
+
++        results.append((survey, img))
+
++    return results
+
++
+
++
+
+ def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tuple[str, np.ndarray]]:
+
+-    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {"1", "true", "yes"}
+
+-    results: List[Tuple[str, np.ndarray]] = []
+
++    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {
+
++        "1",
+
++        "true",
+
++        "yes",
+
++    }
+
+ 
+
+     if offline:
+
+-        for survey in cfg.surveys:
+
+-            key = f"{ra_deg:.6f}|{dec_deg:.6f}|{survey}"
+
+-            seed = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
+
+-            rng = np.random.default_rng(seed)
+
++        return _synthetic_cutouts(ra_deg, dec_deg, cfg)
+
+ 
+
+-            n = int(cfg.pixels)
+
+-            yy, xx = np.mgrid[0:n, 0:n]
+
+-            cx = rng.uniform(0.35 * n, 0.65 * n)
+
+-            cy = rng.uniform(0.35 * n, 0.65 * n)
+
+-            sx = rng.uniform(0.06 * n, 0.12 * n)
+
+-            sy = rng.uniform(0.06 * n, 0.12 * n)
+
++    try:
+
++        from astropy import units as u
+
++        from astropy.coordinates import SkyCoord
+
++        from astroquery.skyview import SkyView
+
++    except Exception:
+
++        return _synthetic_cutouts(ra_deg, dec_deg, cfg)
+
+ 
+
+-            blob = np.exp(-(((xx - cx) ** 2) / (2 * sx**2) + ((yy - cy) ** 2) / (2 * sy**2)))
+
+-            noise = rng.normal(0, 0.05, size=(n, n))
+
+-            bg = rng.normal(0, 0.01, size=(n, n))
+
+-            img = (0.8 * blob + noise + bg).astype(float)
+
+-            results.append((survey, img))
+
+-        return results
+
++    results: List[Tuple[str, np.ndarray]] = []
+
++    coord = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg)
+
++
+
++    for survey in cfg.surveys:
+
++        try:
+
++            images = SkyView.get_images(
+
++                position=coord,
+
++                survey=[survey],
+
++                pixels=cfg.pixels,
+
++                radius=cfg.cutout_radius_arcmin * u.arcmin,
+
++            )
+
++            if not images:
+
++                continue
+
++            data = images[0][0].data
+
++            if data is None:
+
++                continue
+
++            results.append((survey, data))
+
++        except Exception:
+
++            continue
+
++
+
++    if not results:
+
++        return _synthetic_cutouts(ra_deg, dec_deg, cfg)
+
++
+
++    return results
+
+ 
+
+     from astropy import units as u
+
+     from astropy.coordinates import SkyCoord
+
+
+--- a/src/astrooracle/ml/model.py
++++ b/src/astrooracle/ml/model.py
+@@ -2,6 +2,8 @@
+ 
+
+ from dataclasses import dataclass
+
+ from typing import List
+
++
+
++import inspect
+
+ 
+
+ import numpy as np
+
+ from sklearn.calibration import CalibratedClassifierCV
+
+@@ -57,7 +59,14 @@
+ 
+
+         Xm, ym = X[idx], y[idx]
+
+ 
+
+-        base = LogisticRegression(max_iter=2000, multi_class="auto")
+
++        base_kwargs = {"max_iter": 2000}
+
++        try:
+
++            sig = inspect.signature(LogisticRegression)
+
++        except (TypeError, ValueError):
+
++            sig = inspect.signature(LogisticRegression.__init__)
+
++        if "multi_class" in sig.parameters:
+
++            base_kwargs["multi_class"] = "auto"
+
++        base = LogisticRegression(**base_kwargs)
+
+ 
+
+         unique, counts = np.unique(ym, return_counts=True)
+
+         min_count = int(counts.min()) if len(counts) else 0
+
+
+--- a/src/astrooracle/stats.py
++++ b/src/astrooracle/stats.py
+@@ -1,30 +1,63 @@
+ from __future__ import annotations
+
+ 
+
+-from pathlib import Path
+
+ from typing import Dict
+
+ 
+
+-import duckdb
+
+ import pandas as pd
+
+ 
+
+ from .config import OracleConfig
+
++
+
++try:
+
++    import duckdb  # type: ignore[import-not-found]
+
++
+
++    _HAS_DUCKDB = True
+
++except Exception:  # pragma: no cover
+
++    duckdb = None  # type: ignore[assignment]
+
++    _HAS_DUCKDB = False
+
+ 
+
+ 
+
+ def annotation_stats(cfg: OracleConfig) -> Dict[str, object]:
+
+     if not cfg.annot_path.exists():
+
+         return {"n": 0}
+
++
+
+     df = pd.read_csv(cfg.annot_path)
+
+-    out = {
+
++    out: Dict[str, object] = {
+
+         "n": int(len(df)),
+
+-        "label_counts": df["label"].value_counts(dropna=False).to_dict() if "label" in df.columns else {},
+
++        "label_counts": df["label"].value_counts(dropna=False).to_dict()
+
++        if "label" in df.columns
+
++        else {},
+
+     }
+
+     return out
+
++
+
++
+
++def _log_stats_pandas(cfg: OracleConfig) -> Dict[str, object]:
+
++    try:
+
++        df = pd.read_json(cfg.log_path, lines=True)
+
++    except ValueError:
+
++        # Empty file or invalid JSON.
+
++        return {"n": 0, "by_event": []}
+
++
+
++    if df.empty or "event" not in df.columns:
+
++        return {"n": int(len(df)), "by_event": []}
+
++
+
++    counts = df["event"].value_counts(dropna=False)
+
++    by_event = [{"event": str(ev), "n": int(n)} for ev, n in counts.items()]
+
++    return {"n": int(len(df)), "by_event": by_event}
+
+ 
+
+ 
+
+ def log_stats(cfg: OracleConfig) -> Dict[str, object]:
+
+     if not cfg.log_path.exists():
+
+         return {"n": 0}
+
+-    con = duckdb.connect(database=":memory:")
+
+-    con.execute("CREATE TABLE logs AS SELECT * FROM read_json_auto(?)", [str(cfg.log_path)])
+
+-    n = int(con.execute("SELECT COUNT(*) FROM logs").fetchone()[0])
+
+-    by_event = con.execute("SELECT event, COUNT(*) AS n FROM logs GROUP BY event ORDER BY n DESC").fetchall()
+
+-    return {"n": n, "by_event": [{"event": e, "n": int(k)} for e, k in by_event]}
+
++
+
++    if not _HAS_DUCKDB:
+
++        return _log_stats_pandas(cfg)
+
++
+
++    try:
+
++        con = duckdb.connect(database=":memory:")
+
++        con.execute("CREATE TABLE logs AS SELECT * FROM read_json_auto(?)", [str(cfg.log_path)])
+
++        n = int(con.execute("SELECT COUNT(*) FROM logs").fetchone()[0])
+
++        by_event = con.execute(
+
++            "SELECT event, COUNT(*) AS n FROM logs GROUP BY event ORDER BY n DESC"
+
++        ).fetchall()
+
++        return {"n": n, "by_event": [{"event": e, "n": int(k)} for e, k in by_event]}
+
++    except Exception:
+
++        return _log_stats_pandas(cfg)
+
+
+--- a/src/astrooracle/viz_matplotlib.py
++++ b/src/astrooracle/viz_matplotlib.py
+@@ -3,11 +3,39 @@
+ from pathlib import Path
+
+ from typing import List, Optional, Tuple
+
+ 
+
++import matplotlib.pyplot as plt
+
+ import numpy as np
+
+-import matplotlib.pyplot as plt
+
+-from astropy.visualization import ZScaleInterval, ImageNormalize
+
++from matplotlib.colors import Normalize
+
+ 
+
+ from .config import OracleConfig
+
++
+
++try:
+
++    from astropy.visualization import ImageNormalize, ZScaleInterval
+
++
+
++    _HAS_ASTROPY = True
+
++except Exception:  # pragma: no cover
+
++    ImageNormalize = None  # type: ignore[assignment]
+
++    ZScaleInterval = None  # type: ignore[assignment]
+
++    _HAS_ASTROPY = False
+
++
+
++
+
++def _fallback_norm(data: np.ndarray) -> Normalize | None:
+
++    finite = np.asarray(data[np.isfinite(data)], dtype=float)
+
++    if finite.size == 0:
+
++        return None
+
++
+
++    try:
+
++        vmin, vmax = np.nanpercentile(finite, [1, 99])
+
++    except Exception:
+
++        vmin, vmax = float(np.nanmin(finite)), float(np.nanmax(finite))
+
++
+
++    if not np.isfinite(vmin) or not np.isfinite(vmax):
+
++        return None
+
++    if vmin == vmax:
+
++        vmin -= 1.0
+
++        vmax += 1.0
+
++
+
++    return Normalize(vmin=vmin, vmax=vmax, clip=True)
+
+ 
+
+ 
+
+ def render_cutouts_matplotlib(
+
+@@ -26,7 +54,11 @@
+         axes = [axes]
+
+ 
+
+     for ax, (survey, data) in zip(axes, cutouts):
+
+-        norm = ImageNormalize(data, interval=ZScaleInterval())
+
++        if _HAS_ASTROPY:
+
++            norm = ImageNormalize(data, interval=ZScaleInterval())
+
++        else:
+
++            norm = _fallback_norm(data)
+
++
+
+         ax.imshow(data, cmap="gray", norm=norm, origin="lower")
+
+         ax.set_title(survey, fontsize=9)
+
+         ax.axis("off")
+
+@@ -37,9 +69,4 @@
+     if save_path is not None:
+
+         save_path.parent.mkdir(parents=True, exist_ok=True)
+
+         fig.savefig(save_path, dpi=150)
+
+-
+
+-    if not cfg.no_gui:
+
+-        plt.show(block=False)
+
+-        plt.pause(0.25)
+
+-
+
+     plt.close(fig)
