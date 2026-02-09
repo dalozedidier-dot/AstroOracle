@@ -47,7 +47,6 @@ def dpp_greedy(emb: np.ndarray, k: int, gamma: float = 1.0, eps: float = 1e-12) 
         if diag[i] <= 0:
             break
         selected.append(i)
-
         # Schur complement update
         ki = K[:, i].copy()
         denom = K[i, i] + eps

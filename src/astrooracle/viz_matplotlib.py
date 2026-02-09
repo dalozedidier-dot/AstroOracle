@@ -3,28 +3,30 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colors import Normalize
 
 from .config import OracleConfig
 
 try:
-    from astropy.visualization import ImageNormalize, ZScaleInterval
+    from astropy.visualization import ImageNormalize, ZScaleInterval  # type: ignore
 except Exception:  # pragma: no cover
-    ImageNormalize = None  # type: ignore
-    ZScaleInterval = None  # type: ignore
+    ImageNormalize = None
+    ZScaleInterval = None
 
 
-def _fallback_norm(data: np.ndarray) -> Optional[Normalize]:
-    finite = data[np.isfinite(data)]
+def _fallback_norm(data: np.ndarray) -> mcolors.Normalize:
+    finite = np.asarray(data, dtype=float)
+    finite = finite[np.isfinite(finite)]
     if finite.size == 0:
-        return None
-    lo = float(np.percentile(finite, 1))
-    hi = float(np.percentile(finite, 99))
-    if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
-        hi = lo + 1.0
-    return Normalize(vmin=lo, vmax=hi)
+        return mcolors.Normalize(vmin=0.0, vmax=1.0)
+    vmin, vmax = np.percentile(finite, [1, 99])
+    if not np.isfinite(vmin) or not np.isfinite(vmax) or vmin == vmax:
+        vmin, vmax = float(finite.min()), float(finite.max())
+        if vmin == vmax:
+            vmax = vmin + 1e-9
+    return mcolors.Normalize(vmin=float(vmin), vmax=float(vmax))
 
 
 def render_cutouts_matplotlib(
@@ -44,9 +46,10 @@ def render_cutouts_matplotlib(
 
     for ax, (survey, data) in zip(axes, cutouts):
         if ImageNormalize is not None and ZScaleInterval is not None:
-            norm = ImageNormalize(data, interval=ZScaleInterval())  # type: ignore[operator]
+            norm = ImageNormalize(data, interval=ZScaleInterval())
         else:
             norm = _fallback_norm(data)
+
         ax.imshow(data, cmap="gray", norm=norm, origin="lower")
         ax.set_title(survey, fontsize=9)
         ax.axis("off")

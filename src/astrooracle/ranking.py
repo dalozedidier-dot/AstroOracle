@@ -5,7 +5,7 @@ from typing import Dict, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from .acquisition import AcquisitionResult, acquire
+from .acquisition import acquire, AcquisitionResult
 from .config import OracleConfig
 from .diversity import dpp_greedy, kcenter_greedy
 from .ml.features import build_feature_matrix
@@ -74,12 +74,7 @@ def rank_candidates(
     if model is None:
         acq_res = _heuristic_acquisition(df)
     else:
-        acq_res = acquire(
-            probs=probs,
-            embeddings=emb,
-            strategy=cfg.ranking.strategy,
-            probs_mc=probs_mc,
-        )
+        acq_res = acquire(probs=probs, embeddings=emb, strategy=cfg.ranking.strategy, probs_mc=probs_mc)
 
     acq_norm = _normalize(acq_res.score)
     pr = prior_score(df)
@@ -101,11 +96,7 @@ def rank_candidates(
         + w.w_div * df["score_div_proxy"]
     )
 
-    metrics = {
-        "n": int(n),
-        "strategy": cfg.ranking.strategy,
-        "diversity": cfg.ranking.diversity,
-    }
+    metrics = {"n": int(n), "strategy": cfg.ranking.strategy, "diversity": cfg.ranking.diversity}
     return df.sort_values("rank_score", ascending=False).reset_index(drop=True), metrics
 
 
