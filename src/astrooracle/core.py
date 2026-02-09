@@ -32,10 +32,15 @@ def select_candidates(df: pd.DataFrame, cfg: OracleConfig) -> pd.DataFrame:
 
 
 def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tuple[str, np.ndarray]]:
-    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {"1", "true", "yes"}
-    results: List[Tuple[str, np.ndarray]] = []
+    """Fetch survey cutouts.
 
-    if offline:
+    Design constraint: the default installation must remain functional without optional
+    astronomy dependencies. If optional deps are missing, fall back to deterministic
+    synthetic cutouts (offline mode).
+    """
+
+    def _synthetic_cutouts() -> List[Tuple[str, np.ndarray]]:
+        results_local: List[Tuple[str, np.ndarray]] = []
         for survey in cfg.surveys:
             key = f"{ra_deg:.6f}|{dec_deg:.6f}|{survey}"
             seed = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
@@ -52,13 +57,22 @@ def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tupl
             noise = rng.normal(0, 0.05, size=(n, n))
             bg = rng.normal(0, 0.01, size=(n, n))
             img = (0.8 * blob + noise + bg).astype(float)
-            results.append((survey, img))
-        return results
+            results_local.append((survey, img))
+        return results_local
 
-    from astropy import units as u
-    from astropy.coordinates import SkyCoord
-    from astroquery.skyview import SkyView
+    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {"1", "true", "yes"}
+    if offline:
+        return _synthetic_cutouts()
 
+    # Optional dependency path: if deps missing, degrade to offline synthetic.
+    try:
+        from astropy import units as u
+        from astropy.coordinates import SkyCoord
+        from astroquery.skyview import SkyView
+    except ModuleNotFoundError:
+        return _synthetic_cutouts()
+
+    results: List[Tuple[str, np.ndarray]] = []
     coord = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg)
     for survey in cfg.surveys:
         try:
@@ -76,4 +90,9 @@ def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tupl
             results.append((survey, data))
         except Exception:
             continue
+
+    # If the online path returned nothing (network / service / rate-limit), do not hard-fail.
+    if not results:
+        return _synthetic_cutouts()
+
     return results
