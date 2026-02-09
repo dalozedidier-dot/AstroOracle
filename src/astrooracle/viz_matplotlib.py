@@ -3,17 +3,17 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 
-try:
-    from astropy.visualization import ImageNormalize, ZScaleInterval  # type: ignore
-except Exception:  # pragma: no cover
-    ImageNormalize = None  # type: ignore
-    ZScaleInterval = None  # type: ignore
-
 from .config import OracleConfig
+
+try:
+    from astropy.visualization import ZScaleInterval, ImageNormalize  # type: ignore
+except Exception:  # pragma: no cover
+    ZScaleInterval = None  # type: ignore[assignment]
+    ImageNormalize = None  # type: ignore[assignment]
 
 
 def _fallback_norm(data: np.ndarray) -> Normalize:
@@ -23,7 +23,7 @@ def _fallback_norm(data: np.ndarray) -> Normalize:
         return Normalize(vmin=0.0, vmax=1.0)
     lo = float(np.percentile(finite, 1))
     hi = float(np.percentile(finite, 99))
-    if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
+    if hi <= lo:
         hi = lo + 1.0
     return Normalize(vmin=lo, vmax=hi)
 

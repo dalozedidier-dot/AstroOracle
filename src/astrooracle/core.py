@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from typing import List, Tuple
+
 import hashlib
 import os
-from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -30,11 +31,7 @@ def select_candidates(df: pd.DataFrame, cfg: OracleConfig) -> pd.DataFrame:
     return select_batch(ranked, cfg, k=cfg.n_query)
 
 
-def _synthetic_cutouts(
-    ra_deg: float,
-    dec_deg: float,
-    cfg: OracleConfig,
-) -> List[Tuple[str, np.ndarray]]:
+def _synthetic_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tuple[str, np.ndarray]]:
     results: List[Tuple[str, np.ndarray]] = []
     for survey in cfg.surveys:
         key = f"{ra_deg:.6f}|{dec_deg:.6f}|{survey}"
@@ -56,15 +53,12 @@ def _synthetic_cutouts(
     return results
 
 
-def fetch_cutouts(
-    ra_deg: float,
-    dec_deg: float,
-    cfg: OracleConfig,
-) -> List[Tuple[str, np.ndarray]]:
-    offline_cfg = bool(getattr(cfg, "offline", False))
-    offline_env = os.environ.get("ASTROORACLE_OFFLINE", "").strip().lower() in {"1", "true", "yes"}
-    offline = offline_cfg or offline_env
-
+def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tuple[str, np.ndarray]]:
+    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {
+        "1",
+        "true",
+        "yes",
+    }
     if offline:
         return _synthetic_cutouts(ra_deg, dec_deg, cfg)
 
@@ -77,6 +71,7 @@ def fetch_cutouts(
 
     results: List[Tuple[str, np.ndarray]] = []
     coord = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg)
+
     for survey in cfg.surveys:
         try:
             images = SkyView.get_images(
@@ -94,4 +89,8 @@ def fetch_cutouts(
         except Exception:
             continue
 
-    return results if results else _synthetic_cutouts(ra_deg, dec_deg, cfg)
+    # If online retrieval returned nothing, fall back (still deterministic) instead of returning empty.
+    if not results:
+        return _synthetic_cutouts(ra_deg, dec_deg, cfg)
+
+    return results

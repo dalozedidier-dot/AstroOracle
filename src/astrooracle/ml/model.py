@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import inspect
 from dataclasses import dataclass
+import inspect
 from typing import List
 
 import numpy as np
@@ -30,14 +30,6 @@ class EnsembleModel:
         return f"ensemble_logreg_calib_v2|m={len(self.pipelines)}"
 
 
-def _make_logreg() -> LogisticRegression:
-    params = inspect.signature(LogisticRegression).parameters
-    kwargs = {"max_iter": 2000}
-    if "multi_class" in params:
-        kwargs["multi_class"] = "auto"
-    return LogisticRegression(**kwargs)
-
-
 def train_ensemble(
     X: np.ndarray,
     y: np.ndarray,
@@ -50,22 +42,32 @@ def train_ensemble(
     n = X.shape[0]
     all_labels = np.unique(y)
 
+    # Precompute at least one example index per class (for bootstrap completion)
     per_class_idx = {}
     for lab in all_labels:
         per_class_idx[int(lab)] = int(np.where(y == lab)[0][0])
 
-    for _ in range(n_models):
+    for m in range(n_models):
         idx = rng.integers(0, n, size=n)
 
+        # Ensure every observed class appears at least once in the bootstrap sample
         present = set(int(v) for v in np.unique(y[idx]))
         missing = [lab for lab in all_labels if int(lab) not in present]
         if missing:
-            extra = np.array([per_class_idx[int(lab)] for lab in missing], dtype=int)
-            idx = np.concatenate([idx, extra])
+            idx = np.concatenate([idx, np.array([per_class_idx[int(lab)] for lab in missing], dtype=int)])
 
         Xm, ym = X[idx], y[idx]
 
-        base = _make_logreg()
+        lr_kwargs = {"max_iter": 2000}
+        try:
+            sig = inspect.signature(LogisticRegression)
+            if "multi_class" in sig.parameters:
+                lr_kwargs["multi_class"] = "auto"
+        except Exception:
+            # If signature inspection fails, keep defaults.
+            pass
+
+        base = LogisticRegression(**lr_kwargs)
 
         unique, counts = np.unique(ym, return_counts=True)
         min_count = int(counts.min()) if len(counts) else 0
@@ -92,11 +94,7 @@ def expected_calibration_error(probs: np.ndarray, y_true: np.ndarray, n_bins: in
     ece = 0.0
     for i in range(n_bins):
         lo, hi = bins[i], bins[i + 1]
-        if i < n_bins - 1:
-            mask = (conf >= lo) & (conf < hi)
-        else:
-            mask = (conf >= lo) & (conf <= hi)
-
+        mask = (conf >= lo) & (conf < hi) if i < n_bins - 1 else (conf >= lo) & (conf <= hi)
         if not np.any(mask):
             continue
         ece += np.abs(acc[mask].mean() - conf[mask].mean()) * (mask.mean())
