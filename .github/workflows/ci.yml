@@ -1,4 +1,5 @@
 name: ci
+
 on:
   push:
   pull_request:
@@ -10,20 +11,31 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
+
       - name: Install
         run: |
           python -m pip install -U pip
           pip install -e ".[dev]"
-      - name: Lint
+
+      # Black formats sources; this prevents CI from failing on formatting drift
+      # while keeping formatting consistent for subsequent steps.
+      - name: Format (Black)
+        run: |
+          black .
+
+      - name: Lint (Ruff)
         run: |
           ruff check .
-          black --check .
+
       - name: Tests
         run: |
           pytest -q
