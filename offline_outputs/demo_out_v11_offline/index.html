@@ -1,0 +1,162 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>AstroOracle batch</title>
+  <style>
+    body { font-family: sans-serif; margin: 16px; }
+    .card { border: 1px solid #ddd; padding: 12px; margin: 12px 0; border-radius: 8px; }
+    .imgs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    img { max-width: 360px; height: auto; border: 1px solid #eee; border-radius: 6px; }
+    .btns button { margin-right: 8px; margin-top: 8px; }
+    textarea { width: 100%; height: 60px; margin-top: 8px; }
+    #status { margin-left: 10px; color: #444; }
+  </style>
+</head>
+<body>
+<h1>AstroOracle batch</h1>
+
+<div>
+  <button onclick="exportJSON()">Export JSON</button>
+  <button onclick="exportCSV()">Export CSV</button>
+  <button onclick="clearAll()">Clear saved labels</button>
+  <span id="status"></span>
+</div>
+
+<div id="root"></div>
+
+<script>
+const EMBEDDED_CANDIDATES = [{"id":"cand_0034","ra":15.116823967776117,"dec":27.974278088515504,"score":-0.4131595596016406,"surveys":["DSS2 Red","2MASS J"]},{"id":"cand_0030","ra":191.25475442991,"dec":15.58035044244339,"score":-0.0839799737160854,"surveys":["DSS2 Red","2MASS J"]},{"id":"cand_0013","ra":17.363627379625612,"dec":1.4287904054361782,"score":-1.9225542691803874,"surveys":["DSS2 Red","2MASS J"]},{"id":"cand_0024","ra":142.93271347322002,"dec":29.927502957801956,"score":0.6361950096214267,"surveys":["DSS2 Red","2MASS J"]},{"id":"cand_0021","ra":215.14100458138475,"dec":-24.25684298310017,"score":-0.4066149495716598,"surveys":["DSS2 Red","2MASS J"]},{"id":"cand_0002","ra":235.49344196534125,"dec":-17.064047729011623,"score":0.4407692516038737,"surveys":["DSS2 Red","2MASS J"]},{"id":"cand_0017","ra":298.26269181277263,"dec":-20.560880036502912,"score":0.027180583107559657,"surveys":["DSS2 Red","2MASS J"]},{"id":"cand_0016","ra":175.9086516438055,"dec":12.457599991027564,"score":0.3688667111671594,"surveys":["DSS2 Red","2MASS J"]},{"id":"cand_0037","ra":46.67765437484539,"dec":26.285387854668954,"score":0.48255616715449484,"surveys":["DSS2 Red","2MASS J"]},{"id":"cand_0015","ra":66.3479346473462,"dec":-22.593353019407907,"score":0.0496160631325996,"surveys":["DSS2 Red","2MASS J"]},{"id":"cand_0008","ra":73.39460616701646,"dec":-6.059006895647865,"score":-0.5583546469087529,"surveys":["DSS2 Red","2MASS J"]},{"id":"cand_0010","ra":64.46907554315993,"dec":-17.696330964558836,"score":1.278348385135907,"surveys":["DSS2 Red","2MASS J"]}];
+
+const LABELS = [
+  ["real_anomaly", "Réel"],
+  ["artefact", "Artefact"],
+  ["known", "Connu"],
+  ["new_type", "Nouveau type"],
+  ["skip", "Skip"]
+];
+
+let annotations = JSON.parse(localStorage.getItem("astrooracle_annotations") || "{}");
+
+function setStatus(msg){ document.getElementById("status").textContent = " " + msg; }
+
+function save(){
+  localStorage.setItem("astrooracle_annotations", JSON.stringify(annotations));
+  setStatus("saved");
+}
+
+function slug(s){ return String(s).replace(/[^a-zA-Z0-9_-]/g, "_"); }
+
+function renderCard(c){
+  const id = c.id;
+  const key = String(id);
+  const a = annotations[key] || { label: "", comment: "" };
+
+  const div = document.createElement("div");
+  div.className = "card";
+
+  const h = document.createElement("div");
+  h.innerHTML = "<b>ID:</b> " + id + " | <b>score:</b> " + c.score.toFixed(4) +
+                " | <b>RA:</b> " + c.ra.toFixed(5) + " <b>Dec:</b> " + c.dec.toFixed(5);
+  div.appendChild(h);
+
+  const imgs = document.createElement("div");
+  imgs.className = "imgs";
+
+  (c.surveys || []).forEach(s => {
+    const im = document.createElement("img");
+    im.src = "cutouts/" + slug(id) + "_" + slug(s) + ".png";
+    im.alt = s;
+    imgs.appendChild(im);
+  });
+  div.appendChild(imgs);
+
+  const btns = document.createElement("div");
+  btns.className = "btns";
+  LABELS.forEach(([lab, txt]) => {
+    const b = document.createElement("button");
+    b.textContent = txt;
+    b.onclick = () => {
+      annotations[key] = annotations[key] || {};
+      annotations[key].label = lab;
+      annotations[key].ra = c.ra;
+      annotations[key].dec = c.dec;
+      annotations[key].anomaly_score = c.score;
+      annotations[key].id = id;
+      annotations[key].annotated_at = new Date().toISOString();
+      save();
+      render();
+    };
+    btns.appendChild(b);
+  });
+  div.appendChild(btns);
+
+  const ta = document.createElement("textarea");
+  ta.placeholder = "Commentaire";
+  ta.value = a.comment || "";
+  ta.onchange = () => {
+    annotations[key] = annotations[key] || {};
+    annotations[key].comment = ta.value;
+    save();
+  };
+  div.appendChild(ta);
+
+  const s = document.createElement("div");
+  s.textContent = "Label actuel: " + (a.label || "(vide)");
+  div.appendChild(s);
+
+  return div;
+}
+
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(annotations, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "annotations.json";
+  a.click();
+}
+
+function exportCSV(){
+  const rows = Object.values(annotations);
+  const header = ["id","ra","dec","anomaly_score","label","comment","annotated_at"];
+  const csv = [header.join(",")].concat(rows.map(r =>
+    header.map(k => JSON.stringify((r && (k in r)) ? r[k] : "")).join(",")
+  )).join("\n");
+  const blob = new Blob([csv], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "annotations.csv";
+  a.click();
+}
+
+function clearAll(){
+  if(confirm("Supprimer toutes les annotations sauvegardées (localStorage) ?")){
+    annotations = {};
+    save();
+    render();
+  }
+}
+
+async function loadCandidates(){
+  if(Array.isArray(EMBEDDED_CANDIDATES)){
+    return EMBEDDED_CANDIDATES;
+  }
+  try{
+    const resp = await fetch("candidates.json");
+    return await resp.json();
+  }catch(e){
+    setStatus("failed to load candidates.json");
+    return [];
+  }
+}
+
+async function render(){
+  const root = document.getElementById("root");
+  root.innerHTML = "";
+  const cs = await loadCandidates();
+  cs.forEach(c => root.appendChild(renderCard(c)));
+}
+render();
+</script>
+</body>
+</html>
