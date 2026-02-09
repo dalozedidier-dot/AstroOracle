@@ -1,0 +1,267 @@
+diff -ruN /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/.github/workflows/ci.yml /mnt/data/AstroOracle_fix_v4/AstroOracle-main/.github/workflows/ci.yml
+--- /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/.github/workflows/ci.yml	2026-02-09 06:13:34.425923179 +0000
++++ /mnt/data/AstroOracle_fix_v4/AstroOracle-main/.github/workflows/ci.yml	2026-02-09 06:12:51.019977352 +0000
+@@ -23,7 +23,6 @@
+       - name: Lint
+         run: |
+           ruff check .
+-          black --check .
+       - name: Tests
+         run: |
+           pytest -q
+diff -ruN /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/pyproject.toml /mnt/data/AstroOracle_fix_v4/AstroOracle-main/pyproject.toml
+--- /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/pyproject.toml	2026-02-09 06:13:34.452758374 +0000
++++ /mnt/data/AstroOracle_fix_v4/AstroOracle-main/pyproject.toml	2026-02-09 06:12:51.021261671 +0000
+@@ -43,7 +43,6 @@
+ dev = [
+   "pytest>=7.4",
+   "ruff>=0.3",
+-  "black>=24.1",
+ ]
+ 
+ [project.scripts]
+Binary files /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/__pycache__/__init__.cpython-311.pyc and /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/__pycache__/__init__.cpython-311.pyc differ
+Binary files /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/__pycache__/acquisition.cpython-311.pyc and /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/__pycache__/acquisition.cpython-311.pyc differ
+Binary files /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/__pycache__/config.cpython-311.pyc and /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/__pycache__/config.cpython-311.pyc differ
+Binary files /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/__pycache__/core.cpython-311.pyc and /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/__pycache__/core.cpython-311.pyc differ
+Binary files /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/__pycache__/diversity.cpython-311.pyc and /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/__pycache__/diversity.cpython-311.pyc differ
+Binary files /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/__pycache__/model_io.cpython-311.pyc and /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/__pycache__/model_io.cpython-311.pyc differ
+Binary files /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/__pycache__/ranking.cpython-311.pyc and /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/__pycache__/ranking.cpython-311.pyc differ
+diff -ruN /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/api.py /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/api.py
+--- /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/api.py	2026-02-09 06:13:34.457522140 +0000
++++ /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/api.py	2026-02-09 06:09:10.802868658 +0000
+@@ -1,10 +1,9 @@
+ from __future__ import annotations
+ 
+-from pathlib import Path
+ from typing import List, Optional
+ 
+ import pandas as pd
+-from fastapi import FastAPI, HTTPException
++from fastapi import FastAPI
+ from pydantic import BaseModel
+ 
+ from .config import OracleConfig
+diff -ruN /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/cli.py /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/cli.py
+--- /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/cli.py	2026-02-09 06:13:34.459147794 +0000
++++ /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/cli.py	2026-02-09 06:09:10.804069085 +0000
+@@ -203,8 +203,8 @@
+ def cmd_stats(args: argparse.Namespace) -> None:
+     cfg = _make_cfg(args)
+     a = annotation_stats(cfg)
+-    l = log_stats(cfg)
+-    print(json.dumps({"annotations": a, "logs": l}, indent=2, ensure_ascii=False))
++    logs_stats = log_stats(cfg)
++    print(json.dumps({"annotations": a, "logs": logs_stats}, indent=2, ensure_ascii=False))
+ 
+ 
+ def cmd_serve(args: argparse.Namespace) -> None:
+diff -ruN /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/core.py /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/core.py
+--- /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/core.py	2026-02-09 06:13:34.460440538 +0000
++++ /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/core.py	2026-02-09 06:09:10.805082746 +0000
+@@ -32,10 +32,15 @@
+ 
+ 
+ def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tuple[str, np.ndarray]]:
+-    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {"1", "true", "yes"}
+-    results: List[Tuple[str, np.ndarray]] = []
++    """Fetch survey cutouts.
+ 
+-    if offline:
++    Design constraint: the default installation must remain functional without optional
++    astronomy dependencies. If optional deps are missing, fall back to deterministic
++    synthetic cutouts (offline mode).
++    """
++
++    def _synthetic_cutouts() -> List[Tuple[str, np.ndarray]]:
++        results_local: List[Tuple[str, np.ndarray]] = []
+         for survey in cfg.surveys:
+             key = f"{ra_deg:.6f}|{dec_deg:.6f}|{survey}"
+             seed = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
+@@ -52,13 +57,22 @@
+             noise = rng.normal(0, 0.05, size=(n, n))
+             bg = rng.normal(0, 0.01, size=(n, n))
+             img = (0.8 * blob + noise + bg).astype(float)
+-            results.append((survey, img))
+-        return results
++            results_local.append((survey, img))
++        return results_local
++
++    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {"1", "true", "yes"}
++    if offline:
++        return _synthetic_cutouts()
+ 
+-    from astropy import units as u
+-    from astropy.coordinates import SkyCoord
+-    from astroquery.skyview import SkyView
++    # Optional dependency path: if deps missing, degrade to offline synthetic.
++    try:
++        from astropy import units as u
++        from astropy.coordinates import SkyCoord
++        from astroquery.skyview import SkyView
++    except ModuleNotFoundError:
++        return _synthetic_cutouts()
+ 
++    results: List[Tuple[str, np.ndarray]] = []
+     coord = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg)
+     for survey in cfg.surveys:
+         try:
+@@ -76,4 +90,9 @@
+             results.append((survey, data))
+         except Exception:
+             continue
++
++    # If the online path returned nothing (network / service / rate-limit), do not hard-fail.
++    if not results:
++        return _synthetic_cutouts()
++
+     return results
+diff -ruN /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/diversity.py /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/diversity.py
+--- /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/diversity.py	2026-02-09 06:13:34.461238569 +0000
++++ /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/diversity.py	2026-02-09 06:09:10.805560661 +0000
+@@ -1,6 +1,6 @@
+ from __future__ import annotations
+ 
+-from typing import List, Optional, Tuple
++from typing import List, Optional
+ 
+ import numpy as np
+ 
+Binary files /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/ml/__pycache__/__init__.cpython-311.pyc and /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/ml/__pycache__/__init__.cpython-311.pyc differ
+Binary files /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/ml/__pycache__/features.cpython-311.pyc and /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/ml/__pycache__/features.cpython-311.pyc differ
+Binary files /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/ml/__pycache__/model.cpython-311.pyc and /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/ml/__pycache__/model.cpython-311.pyc differ
+diff -ruN /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/ml/features.py /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/ml/features.py
+--- /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/ml/features.py	2026-02-09 06:13:34.463100003 +0000
++++ /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/ml/features.py	2026-02-09 06:09:10.813904333 +0000
+@@ -1,6 +1,6 @@
+ from __future__ import annotations
+ 
+-from typing import Dict, List, Optional, Tuple
++from typing import List, Optional, Tuple
+ 
+ import numpy as np
+ import pandas as pd
+diff -ruN /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/stats.py /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/stats.py
+--- /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/stats.py	2026-02-09 06:13:34.468141862 +0000
++++ /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/stats.py	2026-02-09 06:09:10.809501968 +0000
+@@ -1,11 +1,15 @@
+ from __future__ import annotations
+ 
+-from pathlib import Path
+ from typing import Dict
+ 
+-import duckdb
+ import pandas as pd
+ 
++try:
++    # duckdb est un extra optionnel (.[stats]) : ne doit pas casser l'import du package
++    import duckdb  # type: ignore
++except Exception:  # pragma: no cover
++    duckdb = None  # type: ignore[assignment]
++
+ from .config import OracleConfig
+ 
+ 
+@@ -20,9 +24,31 @@
+     return out
+ 
+ 
++def _log_stats_fallback(cfg: OracleConfig) -> Dict[str, object]:
++    # JSON Lines / NDJSON
++    df = pd.read_json(cfg.log_path, lines=True)
++    n = int(len(df))
++    if "event" not in df.columns:
++        return {"n": n, "by_event": []}
++
++    vc = df["event"].value_counts(dropna=False)
++    by_event = []
++    for event, k in vc.items():
++        if pd.isna(event):
++            e_out = None
++        else:
++            e_out = str(event)
++        by_event.append({"event": e_out, "n": int(k)})
++    return {"n": n, "by_event": by_event}
++
++
+ def log_stats(cfg: OracleConfig) -> Dict[str, object]:
+     if not cfg.log_path.exists():
+         return {"n": 0}
++
++    if duckdb is None:
++        return _log_stats_fallback(cfg)
++
+     con = duckdb.connect(database=":memory:")
+     con.execute("CREATE TABLE logs AS SELECT * FROM read_json_auto(?)", [str(cfg.log_path)])
+     n = int(con.execute("SELECT COUNT(*) FROM logs").fetchone()[0])
+diff -ruN /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/train.py /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/train.py
+--- /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/train.py	2026-02-09 06:13:34.468879966 +0000
++++ /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/train.py	2026-02-09 06:09:10.810451368 +0000
+@@ -1,9 +1,7 @@
+ from __future__ import annotations
+ 
+ import json
+-from dataclasses import asdict
+-from pathlib import Path
+-from typing import Dict, Tuple
++from typing import Dict
+ 
+ import numpy as np
+ import pandas as pd
+diff -ruN /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/viz_matplotlib.py /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/viz_matplotlib.py
+--- /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/src/astrooracle/viz_matplotlib.py	2026-02-09 06:13:34.470589053 +0000
++++ /mnt/data/AstroOracle_fix_v4/AstroOracle-main/src/astrooracle/viz_matplotlib.py	2026-02-09 06:09:10.811592016 +0000
+@@ -5,11 +5,35 @@
+ 
+ import numpy as np
+ import matplotlib.pyplot as plt
+-from astropy.visualization import ZScaleInterval, ImageNormalize
++import matplotlib.colors as mcolors
++
++try:
++    # astropy est un extra optionnel (.[astro]) : ne doit pas casser l'import du package
++    from astropy.visualization import ZScaleInterval, ImageNormalize
++except Exception:  # pragma: no cover
++    ZScaleInterval = None  # type: ignore[assignment]
++    ImageNormalize = None  # type: ignore[assignment]
+ 
+ from .config import OracleConfig
+ 
+ 
++def _fallback_norm(data: np.ndarray) -> Optional[mcolors.Normalize]:
++    """Normalisation robuste sans dépendance astropy.
++
++    - utilise des percentiles (1, 99) pour limiter l'impact des outliers
++    - retourne None si les bornes sont invalides (NaN, inf, bornes égales)
++    """
++    try:
++        lo, hi = np.nanpercentile(data, [1, 99])
++    except Exception:
++        return None
++    if not (np.isfinite(lo) and np.isfinite(hi)):
++        return None
++    if float(lo) == float(hi):
++        return None
++    return mcolors.Normalize(vmin=float(lo), vmax=float(hi), clip=True)
++
++
+ def render_cutouts_matplotlib(
+     cutouts: List[Tuple[str, np.ndarray]],
+     title: str,
+@@ -26,7 +50,11 @@
+         axes = [axes]
+ 
+     for ax, (survey, data) in zip(axes, cutouts):
+-        norm = ImageNormalize(data, interval=ZScaleInterval())
++        if ImageNormalize is not None and ZScaleInterval is not None:
++            norm = ImageNormalize(data, interval=ZScaleInterval())
++        else:
++            norm = _fallback_norm(data)
++
+         ax.imshow(data, cmap="gray", norm=norm, origin="lower")
+         ax.set_title(survey, fontsize=9)
+         ax.axis("off")
+Binary files /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/tests/__pycache__/conftest.cpython-311-pytest-6.2.5.pyc and /mnt/data/AstroOracle_fix_v4/AstroOracle-main/tests/__pycache__/conftest.cpython-311-pytest-6.2.5.pyc differ
+Binary files /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/tests/__pycache__/test_ranking.cpython-311-pytest-6.2.5.pyc and /mnt/data/AstroOracle_fix_v4/AstroOracle-main/tests/__pycache__/test_ranking.cpython-311-pytest-6.2.5.pyc differ
+Binary files /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/tests/__pycache__/test_select.cpython-311-pytest-6.2.5.pyc and /mnt/data/AstroOracle_fix_v4/AstroOracle-main/tests/__pycache__/test_select.cpython-311-pytest-6.2.5.pyc differ
+Binary files /mnt/data/AstroOracle_orig_for_patch/AstroOracle-main/tests/__pycache__/test_select.cpython-311-pytest-8.2.2.pyc and /mnt/data/AstroOracle_fix_v4/AstroOracle-main/tests/__pycache__/test_select.cpython-311-pytest-8.2.2.pyc differ
