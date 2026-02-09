@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -18,21 +18,23 @@ def append_annotations(cfg: OracleConfig, rows: List[Dict[str, Any]]) -> None:
     df_new.to_csv(cfg.annot_path, mode="a", header=write_header, index=False)
 
 
+def _loads_embedding(x: object) -> Optional[np.ndarray]:
+    if pd.isna(x):
+        return None
+    if isinstance(x, str) and x.strip():
+        try:
+            return np.array(json.loads(x), dtype=float)
+        except Exception:
+            return None
+    return None
+
+
 def read_annotations(cfg: OracleConfig) -> pd.DataFrame:
     if not cfg.annot_path.exists():
         return pd.DataFrame()
     df = pd.read_csv(cfg.annot_path)
     if "embedding" in df.columns and not df.empty:
-        def _loads(x):
-            if pd.isna(x):
-                return None
-            if isinstance(x, str) and x.strip():
-                try:
-                    return np.array(json.loads(x), dtype=float)
-                except Exception:
-                    return None
-            return None
-        df["embedding_vec"] = df["embedding"].map(_loads)
+        df["embedding_vec"] = df["embedding"].map(_loads_embedding)
     return df
 
 

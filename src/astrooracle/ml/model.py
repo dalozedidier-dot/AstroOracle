@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import inspect
 from dataclasses import dataclass
 from typing import List
-import inspect
 
 import numpy as np
 from sklearn.calibration import CalibratedClassifierCV
@@ -30,14 +30,12 @@ class EnsembleModel:
         return f"ensemble_logreg_calib_v2|m={len(self.pipelines)}"
 
 
-def _logreg_kwargs() -> dict:
-    # sklearn changed the LogisticRegression signature across versions.
-    # In particular, `multi_class` is removed in newer releases.
-    sig = inspect.signature(LogisticRegression)
-    kwargs: dict = {"max_iter": 2000}
+def _make_base_logreg() -> LogisticRegression:
+    kwargs = {"max_iter": 2000}
+    sig = inspect.signature(LogisticRegression.__init__)
     if "multi_class" in sig.parameters:
         kwargs["multi_class"] = "auto"
-    return kwargs
+    return LogisticRegression(**kwargs)
 
 
 def train_ensemble(
@@ -57,18 +55,20 @@ def train_ensemble(
     for lab in all_labels:
         per_class_idx[int(lab)] = int(np.where(y == lab)[0][0])
 
-    for _ in range(n_models):
+    for _m in range(n_models):
         idx = rng.integers(0, n, size=n)
 
         # Ensure every observed class appears at least once in the bootstrap sample
         present = set(int(v) for v in np.unique(y[idx]))
         missing = [lab for lab in all_labels if int(lab) not in present]
         if missing:
-            idx = np.concatenate([idx, np.array([per_class_idx[int(lab)] for lab in missing], dtype=int)])
+            idx = np.concatenate(
+                [idx, np.array([per_class_idx[int(lab)] for lab in missing], dtype=int)]
+            )
 
         Xm, ym = X[idx], y[idx]
 
-        base = LogisticRegression(**_logreg_kwargs())
+        base = _make_base_logreg()
 
         unique, counts = np.unique(ym, return_counts=True)
         min_count = int(counts.min()) if len(counts) else 0
@@ -86,7 +86,9 @@ def train_ensemble(
     return EnsembleModel(classes_=classes, pipelines=pipes)
 
 
-def expected_calibration_error(probs: np.ndarray, y_true: np.ndarray, n_bins: int = 15) -> float:
+def expected_calibration_error(
+    probs: np.ndarray, y_true: np.ndarray, n_bins: int = 15
+) -> float:
     conf = probs.max(axis=1)
     pred = probs.argmax(axis=1)
     acc = (pred == y_true).astype(float)
@@ -95,7 +97,10 @@ def expected_calibration_error(probs: np.ndarray, y_true: np.ndarray, n_bins: in
     ece = 0.0
     for i in range(n_bins):
         lo, hi = bins[i], bins[i + 1]
-        mask = (conf >= lo) & (conf < hi) if i < n_bins - 1 else (conf >= lo) & (conf <= hi)
+        if i < n_bins - 1:
+            mask = (conf >= lo) & (conf < hi)
+        else:
+            mask = (conf >= lo) & (conf <= hi)
         if not np.any(mask):
             continue
         ece += np.abs(acc[mask].mean() - conf[mask].mean()) * (mask.mean())

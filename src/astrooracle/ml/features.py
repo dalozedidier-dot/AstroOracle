@@ -18,6 +18,7 @@ def _safe_numeric(df: pd.DataFrame, cols: List[str]) -> np.ndarray:
             v = np.full(len(df), np.nan, dtype=float)
         out.append(v)
     X = np.stack(out, axis=1)
+
     # Replace nan with column median
     for j in range(X.shape[1]):
         col = X[:, j]
@@ -27,14 +28,18 @@ def _safe_numeric(df: pd.DataFrame, cols: List[str]) -> np.ndarray:
     return X
 
 
-def build_feature_matrix(df: pd.DataFrame) -> Tuple[np.ndarray, List[str], Optional[np.ndarray]]:
+def build_feature_matrix(
+    df: pd.DataFrame,
+) -> Tuple[np.ndarray, List[str], Optional[np.ndarray]]:
     prior = _safe_numeric(df, NUMERIC_PRIOR_COLS)
     names = [f"prior_{c}" for c in NUMERIC_PRIOR_COLS]
 
     emb = None
     if "embedding" in df.columns:
         try:
-            emb = np.stack(df["embedding"].apply(lambda x: np.asarray(x, dtype=float)).to_numpy())
+            emb = np.stack(
+                df["embedding"].apply(lambda x: np.asarray(x, dtype=float)).to_numpy()
+            )
         except Exception:
             emb = None
 

@@ -3,30 +3,29 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import Normalize
 
 from .config import OracleConfig
 
 try:
-    from astropy.visualization import ImageNormalize, ZScaleInterval  # type: ignore
+    from astropy.visualization import ImageNormalize, ZScaleInterval
 except Exception:  # pragma: no cover
-    ImageNormalize = None
-    ZScaleInterval = None
+    ImageNormalize = None  # type: ignore
+    ZScaleInterval = None  # type: ignore
 
 
-def _fallback_norm(data: np.ndarray) -> mcolors.Normalize:
-    finite = np.asarray(data, dtype=float)
-    finite = finite[np.isfinite(finite)]
+def _fallback_norm(data: np.ndarray) -> Normalize:
+    arr = np.asarray(data, dtype=float)
+    finite = arr[np.isfinite(arr)]
     if finite.size == 0:
-        return mcolors.Normalize(vmin=0.0, vmax=1.0)
-    vmin, vmax = np.percentile(finite, [1, 99])
-    if not np.isfinite(vmin) or not np.isfinite(vmax) or vmin == vmax:
-        vmin, vmax = float(finite.min()), float(finite.max())
-        if vmin == vmax:
-            vmax = vmin + 1e-9
-    return mcolors.Normalize(vmin=float(vmin), vmax=float(vmax))
+        return Normalize(vmin=0.0, vmax=1.0, clip=True)
+    lo = float(np.percentile(finite, 1))
+    hi = float(np.percentile(finite, 99))
+    if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
+        hi = lo + 1.0
+    return Normalize(vmin=lo, vmax=hi, clip=True)
 
 
 def render_cutouts_matplotlib(
@@ -49,7 +48,6 @@ def render_cutouts_matplotlib(
             norm = ImageNormalize(data, interval=ZScaleInterval())
         else:
             norm = _fallback_norm(data)
-
         ax.imshow(data, cmap="gray", norm=norm, origin="lower")
         ax.set_title(survey, fontsize=9)
         ax.axis("off")

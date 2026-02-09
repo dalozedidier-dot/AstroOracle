@@ -18,19 +18,34 @@ class CandidateRecord(BaseModel):
     id: str = Field(..., description="Stable candidate identifier.")
     ra: float = Field(..., description="Right ascension in degrees.")
     dec: float = Field(..., description="Declination in degrees.")
-    anomaly_score: float = Field(..., description="Upstream anomaly score (higher = more anomalous).")
+    anomaly_score: float = Field(
+        ...,
+        description="Upstream anomaly score (higher = more anomalous).",
+    )
 
     # Optional context
-    timestamp: Optional[str] = Field(default=None, description="ISO timestamp for candidate epoch.")
+    timestamp: Optional[str] = Field(
+        default=None, description="ISO timestamp for candidate epoch."
+    )
     survey: Optional[str] = Field(default=None, description="Upstream survey tag.")
-    mag: Optional[float] = Field(default=None, description="Apparent magnitude if available.")
-    snr: Optional[float] = Field(default=None, description="Signal-to-noise ratio if available.")
+    mag: Optional[float] = Field(
+        default=None, description="Apparent magnitude if available."
+    )
+    snr: Optional[float] = Field(
+        default=None, description="Signal-to-noise ratio if available."
+    )
     ruwe: Optional[float] = Field(default=None, description="Gaia RUWE if available.")
 
     # Model inputs
-    embedding: Optional[List[float]] = Field(default=None, description="Vector embedding.")
-    features: Optional[Dict[str, float]] = Field(default=None, description="Structured numeric features.")
-    meta: Optional[Dict[str, Any]] = Field(default=None, description="Free-form metadata.")
+    embedding: Optional[List[float]] = Field(
+        default=None, description="Vector embedding."
+    )
+    features: Optional[Dict[str, float]] = Field(
+        default=None, description="Structured numeric features."
+    )
+    meta: Optional[Dict[str, Any]] = Field(
+        default=None, description="Free-form metadata."
+    )
 
 
 class AnnotationRecord(BaseModel):

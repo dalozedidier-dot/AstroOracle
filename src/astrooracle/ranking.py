@@ -5,7 +5,7 @@ from typing import Dict, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from .acquisition import acquire, AcquisitionResult
+from .acquisition import AcquisitionResult, acquire
 from .config import OracleConfig
 from .diversity import dpp_greedy, kcenter_greedy
 from .ml.features import build_feature_matrix
@@ -74,14 +74,21 @@ def rank_candidates(
     if model is None:
         acq_res = _heuristic_acquisition(df)
     else:
-        acq_res = acquire(probs=probs, embeddings=emb, strategy=cfg.ranking.strategy, probs_mc=probs_mc)
+        acq_res = acquire(
+            probs=probs,
+            embeddings=emb,
+            strategy=cfg.ranking.strategy,
+            probs_mc=probs_mc,
+        )
 
     acq_norm = _normalize(acq_res.score)
     pr = prior_score(df)
 
     div_proxy = np.ones(n, dtype=float)
     if emb is not None:
-        div_proxy = _normalize(np.linalg.norm(emb - emb.mean(axis=0, keepdims=True), axis=1))
+        div_proxy = _normalize(
+            np.linalg.norm(emb - emb.mean(axis=0, keepdims=True), axis=1)
+        )
 
     df["score_anomaly"] = anomaly
     df["score_acq"] = acq_norm
@@ -96,8 +103,13 @@ def rank_candidates(
         + w.w_div * df["score_div_proxy"]
     )
 
-    metrics = {"n": int(n), "strategy": cfg.ranking.strategy, "diversity": cfg.ranking.diversity}
-    return df.sort_values("rank_score", ascending=False).reset_index(drop=True), metrics
+    metrics = {
+        "n": int(n),
+        "strategy": cfg.ranking.strategy,
+        "diversity": cfg.ranking.diversity,
+    }
+    ranked = df.sort_values("rank_score", ascending=False).reset_index(drop=True)
+    return ranked, metrics
 
 
 def select_batch(ranked: pd.DataFrame, cfg: OracleConfig, k: int) -> pd.DataFrame:
@@ -110,7 +122,9 @@ def select_batch(ranked: pd.DataFrame, cfg: OracleConfig, k: int) -> pd.DataFram
         return ranked.head(k).reset_index(drop=True)
 
     try:
-        emb = np.stack(ranked["embedding"].apply(lambda x: np.asarray(x, dtype=float)).to_numpy())
+        emb = np.stack(
+            ranked["embedding"].apply(lambda x: np.asarray(x, dtype=float)).to_numpy()
+        )
     except Exception:
         return ranked.head(k).reset_index(drop=True)
 

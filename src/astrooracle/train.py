@@ -5,8 +5,8 @@ from typing import Dict
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.model_selection import train_test_split
 
 from .annotations import read_annotations
 from .config import OracleConfig
@@ -50,7 +50,10 @@ def train_from_files(cfg: OracleConfig) -> Dict[str, object]:
 
     X, feat_names, _ = build_feature_matrix(df)
 
-    Xtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.2, random_state=7, stratify=y if len(np.unique(y)) > 1 else None)
+    stratify = y if len(np.unique(y)) > 1 else None
+    Xtr, Xte, ytr, yte = train_test_split(
+        X, y, test_size=0.2, random_state=7, stratify=stratify
+    )
 
     model = train_ensemble(Xtr, ytr, classes=classes, n_models=5, seed=7)
     probs = model.predict_proba(Xte)
