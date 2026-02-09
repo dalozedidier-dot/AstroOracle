@@ -6,12 +6,12 @@ import pandas as pd
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from .annotations import append_annotations
 from .config import OracleConfig
+from .logging_utils import log_event
 from .model_io import load_model
 from .ranking import rank_candidates, select_batch
 from .schemas import AnnotationRecord, CandidateRecord
-from .annotations import append_annotations
-from .logging_utils import log_event
 
 
 class RankRequest(BaseModel):

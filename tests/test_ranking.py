@@ -1,13 +1,15 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 
 from astrooracle.config import OracleConfig, RankingConfig
-from astrooracle.ranking import rank_candidates, select_batch
-from astrooracle.ml.model import train_ensemble
 from astrooracle.ml.features import build_feature_matrix
+from astrooracle.ml.model import train_ensemble
+from astrooracle.ranking import rank_candidates, select_batch
 
 
-def test_rank_and_select_runs():
+def test_rank_and_select_runs() -> None:
     cfg = OracleConfig.default()
     cfg = OracleConfig(**{**cfg.__dict__, "ranking": RankingConfig.default()})
 
@@ -27,9 +29,14 @@ def test_rank_and_select_runs():
     # train a tiny model
     X, _, _ = build_feature_matrix(df)
     y = np.array([0, 1, 2, 3])
-    model = train_ensemble(X, y, classes=["real_anomaly", "artefact", "known", "new_type", "unsure"], n_models=2)
+    model = train_ensemble(
+        X,
+        y,
+        classes=["real_anomaly", "artefact", "known", "new_type", "unsure"],
+        n_models=2,
+    )
 
-    ranked, meta = rank_candidates(df.drop(columns=["label"]), cfg, model=model)
+    ranked, _meta = rank_candidates(df.drop(columns=["label"]), cfg, model=model)
     assert len(ranked) == 4
     assert "rank_score" in ranked.columns
     batch = select_batch(ranked, cfg, k=2)

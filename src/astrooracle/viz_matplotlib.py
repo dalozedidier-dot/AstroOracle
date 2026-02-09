@@ -3,35 +3,28 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-
-try:
-    # astropy est un extra optionnel (.[astro]) : ne doit pas casser l'import du package
-    from astropy.visualization import ZScaleInterval, ImageNormalize
-except Exception:  # pragma: no cover
-    ZScaleInterval = None  # type: ignore[assignment]
-    ImageNormalize = None  # type: ignore[assignment]
+import numpy as np
+from matplotlib.colors import Normalize
 
 from .config import OracleConfig
 
+try:
+    from astropy.visualization import ImageNormalize, ZScaleInterval
+except Exception:  # pragma: no cover
+    ImageNormalize = None  # type: ignore
+    ZScaleInterval = None  # type: ignore
 
-def _fallback_norm(data: np.ndarray) -> Optional[mcolors.Normalize]:
-    """Normalisation robuste sans dépendance astropy.
 
-    - utilise des percentiles (1, 99) pour limiter l'impact des outliers
-    - retourne None si les bornes sont invalides (NaN, inf, bornes égales)
-    """
-    try:
-        lo, hi = np.nanpercentile(data, [1, 99])
-    except Exception:
+def _fallback_norm(data: np.ndarray) -> Optional[Normalize]:
+    finite = data[np.isfinite(data)]
+    if finite.size == 0:
         return None
-    if not (np.isfinite(lo) and np.isfinite(hi)):
-        return None
-    if float(lo) == float(hi):
-        return None
-    return mcolors.Normalize(vmin=float(lo), vmax=float(hi), clip=True)
+    lo = float(np.percentile(finite, 1))
+    hi = float(np.percentile(finite, 99))
+    if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
+        hi = lo + 1.0
+    return Normalize(vmin=lo, vmax=hi)
 
 
 def render_cutouts_matplotlib(
@@ -51,10 +44,9 @@ def render_cutouts_matplotlib(
 
     for ax, (survey, data) in zip(axes, cutouts):
         if ImageNormalize is not None and ZScaleInterval is not None:
-            norm = ImageNormalize(data, interval=ZScaleInterval())
+            norm = ImageNormalize(data, interval=ZScaleInterval())  # type: ignore[operator]
         else:
             norm = _fallback_norm(data)
-
         ax.imshow(data, cmap="gray", norm=norm, origin="lower")
         ax.set_title(survey, fontsize=9)
         ax.axis("off")

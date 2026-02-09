@@ -5,7 +5,6 @@ from typing import List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-
 NUMERIC_PRIOR_COLS = ["mag", "snr", "ruwe", "anomaly_score"]
 
 
@@ -18,12 +17,12 @@ def _safe_numeric(df: pd.DataFrame, cols: List[str]) -> np.ndarray:
             v = np.full(len(df), np.nan, dtype=float)
         out.append(v)
     X = np.stack(out, axis=1)
+
     # Replace nan with column median
     for j in range(X.shape[1]):
         col = X[:, j]
         med = np.nanmedian(col) if np.isfinite(col).any() else 0.0
-        col = np.where(np.isfinite(col), col, med)
-        X[:, j] = col
+        X[:, j] = np.where(np.isfinite(col), col, med)
     return X
 
 

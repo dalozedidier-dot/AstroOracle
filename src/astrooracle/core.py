@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import List, Tuple
-
-import os
 import hashlib
+import os
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -31,46 +30,47 @@ def select_candidates(df: pd.DataFrame, cfg: OracleConfig) -> pd.DataFrame:
     return select_batch(ranked, cfg, k=cfg.n_query)
 
 
+def _synthetic_cutouts(
+    ra_deg: float,
+    dec_deg: float,
+    cfg: OracleConfig,
+) -> List[Tuple[str, np.ndarray]]:
+    results: List[Tuple[str, np.ndarray]] = []
+    for survey in cfg.surveys:
+        key = f"{ra_deg:.6f}|{dec_deg:.6f}|{survey}"
+        seed = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
+        rng = np.random.default_rng(seed)
+
+        n = int(cfg.pixels)
+        yy, xx = np.mgrid[0:n, 0:n]
+        cx = rng.uniform(0.35 * n, 0.65 * n)
+        cy = rng.uniform(0.35 * n, 0.65 * n)
+        sx = rng.uniform(0.06 * n, 0.12 * n)
+        sy = rng.uniform(0.06 * n, 0.12 * n)
+
+        blob = np.exp(-(((xx - cx) ** 2) / (2 * sx**2) + ((yy - cy) ** 2) / (2 * sy**2)))
+        noise = rng.normal(0, 0.05, size=(n, n))
+        bg = rng.normal(0, 0.01, size=(n, n))
+        img = (0.8 * blob + noise + bg).astype(float)
+        results.append((survey, img))
+    return results
+
+
 def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tuple[str, np.ndarray]]:
-    """Fetch survey cutouts.
-
-    Design constraint: the default installation must remain functional without optional
-    astronomy dependencies. If optional deps are missing, fall back to deterministic
-    synthetic cutouts (offline mode).
-    """
-
-    def _synthetic_cutouts() -> List[Tuple[str, np.ndarray]]:
-        results_local: List[Tuple[str, np.ndarray]] = []
-        for survey in cfg.surveys:
-            key = f"{ra_deg:.6f}|{dec_deg:.6f}|{survey}"
-            seed = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
-            rng = np.random.default_rng(seed)
-
-            n = int(cfg.pixels)
-            yy, xx = np.mgrid[0:n, 0:n]
-            cx = rng.uniform(0.35 * n, 0.65 * n)
-            cy = rng.uniform(0.35 * n, 0.65 * n)
-            sx = rng.uniform(0.06 * n, 0.12 * n)
-            sy = rng.uniform(0.06 * n, 0.12 * n)
-
-            blob = np.exp(-(((xx - cx) ** 2) / (2 * sx**2) + ((yy - cy) ** 2) / (2 * sy**2)))
-            noise = rng.normal(0, 0.05, size=(n, n))
-            bg = rng.normal(0, 0.01, size=(n, n))
-            img = (0.8 * blob + noise + bg).astype(float)
-            results_local.append((survey, img))
-        return results_local
-
-    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {"1", "true", "yes"}
+    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {
+        "1",
+        "true",
+        "yes",
+    }
     if offline:
-        return _synthetic_cutouts()
+        return _synthetic_cutouts(ra_deg, dec_deg, cfg)
 
-    # Optional dependency path: if deps missing, degrade to offline synthetic.
     try:
         from astropy import units as u
         from astropy.coordinates import SkyCoord
         from astroquery.skyview import SkyView
-    except ModuleNotFoundError:
-        return _synthetic_cutouts()
+    except Exception:
+        return _synthetic_cutouts(ra_deg, dec_deg, cfg)
 
     results: List[Tuple[str, np.ndarray]] = []
     coord = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg)
@@ -91,8 +91,6 @@ def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tupl
         except Exception:
             continue
 
-    # If the online path returned nothing (network / service / rate-limit), do not hard-fail.
     if not results:
-        return _synthetic_cutouts()
-
+        return _synthetic_cutouts(ra_deg, dec_deg, cfg)
     return results
