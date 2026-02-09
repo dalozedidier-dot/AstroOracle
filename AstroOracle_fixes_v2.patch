@@ -1,0 +1,161 @@
+--- a/src/astrooracle/viz_matplotlib.py
++++ b/src/astrooracle/viz_matplotlib.py
+@@ -5,9 +5,33 @@
+ 
+ import numpy as np
+ import matplotlib.pyplot as plt
+-from astropy.visualization import ZScaleInterval, ImageNormalize
++import matplotlib.colors as mcolors
++
++try:
++    # astropy est un extra optionnel (.[astro]) : ne doit pas casser l'import du package
++    from astropy.visualization import ZScaleInterval, ImageNormalize
++except Exception:  # pragma: no cover
++    ZScaleInterval = None  # type: ignore[assignment]
++    ImageNormalize = None  # type: ignore[assignment]
+ 
+ from .config import OracleConfig
++
++
++def _fallback_norm(data: np.ndarray) -> Optional[mcolors.Normalize]:
++    """Normalisation robuste sans dépendance astropy.
++
++    - utilise des percentiles (1, 99) pour limiter l'impact des outliers
++    - retourne None si les bornes sont invalides (NaN, inf, bornes égales)
++    """
++    try:
++        lo, hi = np.nanpercentile(data, [1, 99])
++    except Exception:
++        return None
++    if not (np.isfinite(lo) and np.isfinite(hi)):
++        return None
++    if float(lo) == float(hi):
++        return None
++    return mcolors.Normalize(vmin=float(lo), vmax=float(hi), clip=True)
+ 
+ 
+ def render_cutouts_matplotlib(
+@@ -26,7 +50,11 @@
+         axes = [axes]
+ 
+     for ax, (survey, data) in zip(axes, cutouts):
+-        norm = ImageNormalize(data, interval=ZScaleInterval())
++        if ImageNormalize is not None and ZScaleInterval is not None:
++            norm = ImageNormalize(data, interval=ZScaleInterval())
++        else:
++            norm = _fallback_norm(data)
++
+         ax.imshow(data, cmap="gray", norm=norm, origin="lower")
+         ax.set_title(survey, fontsize=9)
+         ax.axis("off")
+--- a/src/astrooracle/stats.py
++++ b/src/astrooracle/stats.py
+@@ -1,10 +1,14 @@
+ from __future__ import annotations
+ 
+-from pathlib import Path
+ from typing import Dict
+ 
+-import duckdb
+ import pandas as pd
++
++try:
++    # duckdb est un extra optionnel (.[stats]) : ne doit pas casser l'import du package
++    import duckdb  # type: ignore
++except Exception:  # pragma: no cover
++    duckdb = None  # type: ignore[assignment]
+ 
+ from .config import OracleConfig
+ 
+@@ -20,9 +24,31 @@
+     return out
+ 
+ 
++def _log_stats_fallback(cfg: OracleConfig) -> Dict[str, object]:
++    # JSON Lines / NDJSON
++    df = pd.read_json(cfg.log_path, lines=True)
++    n = int(len(df))
++    if "event" not in df.columns:
++        return {"n": n, "by_event": []}
++
++    vc = df["event"].value_counts(dropna=False)
++    by_event = []
++    for event, k in vc.items():
++        if pd.isna(event):
++            e_out = None
++        else:
++            e_out = str(event)
++        by_event.append({"event": e_out, "n": int(k)})
++    return {"n": n, "by_event": by_event}
++
++
+ def log_stats(cfg: OracleConfig) -> Dict[str, object]:
+     if not cfg.log_path.exists():
+         return {"n": 0}
++
++    if duckdb is None:
++        return _log_stats_fallback(cfg)
++
+     con = duckdb.connect(database=":memory:")
+     con.execute("CREATE TABLE logs AS SELECT * FROM read_json_auto(?)", [str(cfg.log_path)])
+     n = int(con.execute("SELECT COUNT(*) FROM logs").fetchone()[0])
+--- a/src/astrooracle/cli.py
++++ b/src/astrooracle/cli.py
+@@ -203,8 +203,8 @@
+ def cmd_stats(args: argparse.Namespace) -> None:
+     cfg = _make_cfg(args)
+     a = annotation_stats(cfg)
+-    l = log_stats(cfg)
+-    print(json.dumps({"annotations": a, "logs": l}, indent=2, ensure_ascii=False))
++    logs_stats = log_stats(cfg)
++    print(json.dumps({"annotations": a, "logs": logs_stats}, indent=2, ensure_ascii=False))
+ 
+ 
+ def cmd_serve(args: argparse.Namespace) -> None:
+--- a/src/astrooracle/api.py
++++ b/src/astrooracle/api.py
+@@ -1,10 +1,9 @@
+ from __future__ import annotations
+ 
+-from pathlib import Path
+ from typing import List, Optional
+ 
+ import pandas as pd
+-from fastapi import FastAPI, HTTPException
++from fastapi import FastAPI
+ from pydantic import BaseModel
+ 
+ from .config import OracleConfig
+--- a/src/astrooracle/diversity.py
++++ b/src/astrooracle/diversity.py
+@@ -1,6 +1,6 @@
+ from __future__ import annotations
+ 
+-from typing import List, Optional, Tuple
++from typing import List, Optional
+ 
+ import numpy as np
+ 
+--- a/src/astrooracle/ml/features.py
++++ b/src/astrooracle/ml/features.py
+@@ -1,6 +1,6 @@
+ from __future__ import annotations
+ 
+-from typing import Dict, List, Optional, Tuple
++from typing import List, Optional, Tuple
+ 
+ import numpy as np
+ import pandas as pd
+--- a/src/astrooracle/train.py
++++ b/src/astrooracle/train.py
+@@ -1,9 +1,7 @@
+ from __future__ import annotations
+ 
+ import json
+-from dataclasses import asdict
+-from pathlib import Path
+-from typing import Dict, Tuple
++from typing import Dict
+ 
+ import numpy as np
+ import pandas as pd
