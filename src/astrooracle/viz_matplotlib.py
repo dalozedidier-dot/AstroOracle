@@ -5,27 +5,9 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
+from astropy.visualization import ZScaleInterval, ImageNormalize
 
 from .config import OracleConfig
-
-try:
-    from astropy.visualization import ZScaleInterval, ImageNormalize  # type: ignore
-except Exception:  # pragma: no cover
-    ZScaleInterval = None  # type: ignore[assignment]
-    ImageNormalize = None  # type: ignore[assignment]
-
-
-def _fallback_norm(data: np.ndarray) -> Normalize:
-    arr = np.asarray(data, dtype=float)
-    finite = arr[np.isfinite(arr)]
-    if finite.size == 0:
-        return Normalize(vmin=0.0, vmax=1.0)
-    lo = float(np.percentile(finite, 1))
-    hi = float(np.percentile(finite, 99))
-    if hi <= lo:
-        hi = lo + 1.0
-    return Normalize(vmin=lo, vmax=hi)
 
 
 def render_cutouts_matplotlib(
@@ -44,10 +26,7 @@ def render_cutouts_matplotlib(
         axes = [axes]
 
     for ax, (survey, data) in zip(axes, cutouts):
-        if ImageNormalize is not None and ZScaleInterval is not None:
-            norm = ImageNormalize(data, interval=ZScaleInterval())
-        else:
-            norm = _fallback_norm(data)
+        norm = ImageNormalize(data, interval=ZScaleInterval())
         ax.imshow(data, cmap="gray", norm=norm, origin="lower")
         ax.set_title(survey, fontsize=9)
         ax.axis("off")

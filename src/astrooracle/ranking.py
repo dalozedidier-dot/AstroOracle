@@ -5,11 +5,6 @@ from typing import Dict, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-try:
-    from sklearn.ensemble import IsolationForest
-except Exception:  # pragma: no cover
-    IsolationForest = None  # type: ignore[assignment]
-
 from .acquisition import acquire, AcquisitionResult
 from .config import OracleConfig
 from .diversity import dpp_greedy, kcenter_greedy
@@ -26,6 +21,7 @@ def _normalize(x: np.ndarray, eps: float = 1e-12) -> np.ndarray:
     if not np.isfinite(lo) or not np.isfinite(hi) or (hi - lo) < eps:
         return np.zeros_like(x)
     return (x - lo) / (hi - lo + eps)
+
 
 def prior_score(df: pd.DataFrame) -> np.ndarray:
     s = np.zeros(len(df), dtype=float)
@@ -45,57 +41,13 @@ def prior_score(df: pd.DataFrame) -> np.ndarray:
 
     return _normalize(s)
 
-def artifact_score(df: pd.DataFrame) -> np.ndarray:
-    # Higher = more artefact-like (heuristic)
-    n = len(df)
-    if n == 0:
-        return np.zeros(0, dtype=float)
-
-    def col(name: str, default: float = 0.0) -> np.ndarray:
-        if name not in df.columns:
-            return np.full(n, default, dtype=float)
-        v = pd.to_numeric(df[name], errors="coerce").to_numpy(dtype=float)
-        med = float(np.nanmedian(v)) if np.isfinite(v).any() else default
-        return np.where(np.isfinite(v), v, med)
-
-    spike = col("feat_spike_max", 1.0)
-    circ = col("feat_circularity_min", 1.0)
-    snr = col("feat_snr_max", 0.0)
-
-    raw = _normalize(spike) + _normalize(1.0 - np.clip(circ, 0.0, 1.0)) + _normalize(-snr)
-    return _normalize(raw)
-
-def known_score(df: pd.DataFrame) -> np.ndarray:
-    n = len(df)
-    if n == 0:
-        return np.zeros(0, dtype=float)
-
-    def flag(name: str) -> np.ndarray:
-        if name not in df.columns:
-            return np.zeros(n, dtype=float)
-        v = pd.to_numeric(df[name], errors="coerce").fillna(0).to_numpy(dtype=float)
-        return (v > 0).astype(float)
-
-    raw = np.maximum(flag("gaia_match"), flag("simbad_match"))
-    return _normalize(raw)
-
-def iforest_score(X: np.ndarray, seed: int = 7) -> np.ndarray:
-    if IsolationForest is None:
-        return np.zeros(X.shape[0], dtype=float)
-    try:
-        iso = IsolationForest(n_estimators=200, random_state=seed, contamination="auto")
-        iso.fit(X)
-        # decision_function: higher = more normal; invert
-        s = -iso.decision_function(X)
-        return _normalize(s)
-    except Exception:
-        return np.zeros(X.shape[0], dtype=float)
 
 def _heuristic_acquisition(df: pd.DataFrame) -> AcquisitionResult:
     # Offline / no-model acquisition: prioritize around the median anomaly score
     med = float(pd.to_numeric(df["anomaly_score"], errors="coerce").median())
     unc = np.abs(df["anomaly_score"].to_numpy(float) - med)
     return AcquisitionResult(score=unc, components={"median_distance": unc})
+
 
 def rank_candidates(
     df: pd.DataFrame,
@@ -122,12 +74,7 @@ def rank_candidates(
     if model is None:
         acq_res = _heuristic_acquisition(df)
     else:
-        acq_res = acquire(
-            probs=probs,
-            embeddings=emb,
-            strategy=cfg.ranking.strategy,
-            probs_mc=probs_mc,
-        )
+        acq_res = acquire(probs=probs, embeddings=emb, strategy=cfg.ranking.strategy, probs_mc=probs_mc)
 
     acq_norm = _normalize(acq_res.score)
     pr = prior_score(df)
@@ -142,30 +89,16 @@ def rank_candidates(
     df["score_div_proxy"] = div_proxy
 
     w = cfg.ranking
-
-    art = artifact_score(df)
-    known = known_score(df)
-    if w.w_iforest > 0:
-        s_if = iforest_score(X)
-    else:
-        s_if = np.zeros(n, dtype=float)
-
-    df["score_artifact"] = art
-    df["score_known"] = known
-    df["score_iforest"] = s_if
-
     df["rank_score"] = (
         w.w_anomaly * df["score_anomaly"]
         + w.w_acq * df["score_acq"]
         + w.w_prior * df["score_prior"]
         + w.w_div * df["score_div_proxy"]
-        + w.w_iforest * df["score_iforest"]
-        - w.w_artifact * df["score_artifact"]
-        - w.w_known * df["score_known"]
     )
 
     metrics = {"n": int(n), "strategy": cfg.ranking.strategy, "diversity": cfg.ranking.diversity}
     return df.sort_values("rank_score", ascending=False).reset_index(drop=True), metrics
+
 
 def select_batch(ranked: pd.DataFrame, cfg: OracleConfig, k: int) -> pd.DataFrame:
     if ranked.empty:

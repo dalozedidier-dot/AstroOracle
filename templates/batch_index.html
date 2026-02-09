@@ -1,344 +1,148 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>AstroOracle batch</title>
-    <style>
-      body {
-        font-family: sans-serif;
-        margin: 16px;
-      }
-      .card {
-        border: 1px solid #ddd;
-        padding: 12px;
-        margin: 12px 0;
-        border-radius: 8px;
-      }
-      .imgs {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-top: 8px;
-      }
-      .imgwrap {
-        position: relative;
-        display: inline-block;
-      }
-      img {
-        max-width: 360px;
-        height: auto;
-        border: 1px solid #eee;
-        border-radius: 6px;
-        display: block;
-      }
-      .gpoint {
-        position: absolute;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        transform: translate(-50%, -50%);
-        border: 1px solid rgba(0, 0, 0, 0.35);
-        background: rgba(255, 255, 255, 0.65);
-        pointer-events: none;
-      }
-      .meta {
-        margin-top: 6px;
-        font-size: 12px;
-        color: #444;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-      .badge {
-        display: inline-block;
-        padding: 2px 6px;
-        border-radius: 10px;
-        border: 1px solid #ddd;
-        background: #f5f5f5;
-        font-size: 12px;
-      }
-      .btns button {
-        margin-right: 8px;
-        margin-top: 8px;
-      }
-      textarea {
-        width: 100%;
-        height: 60px;
-        margin-top: 8px;
-      }
-      #status {
-        margin-left: 10px;
-        color: #444;
-      }
-      a {
-        color: inherit;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>AstroOracle batch</h1>
+<head>
+  <meta charset="utf-8"/>
+  <title>AstroOracle batch</title>
+  <style>
+    body { font-family: sans-serif; margin: 16px; }
+    .card { border: 1px solid #ddd; padding: 12px; margin: 12px 0; border-radius: 8px; }
+    .imgs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    img { max-width: 360px; height: auto; border: 1px solid #eee; border-radius: 6px; }
+    .btns button { margin-right: 8px; margin-top: 8px; }
+    textarea { width: 100%; height: 60px; margin-top: 8px; }
+    #status { margin-left: 10px; color: #444; }
+  </style>
+</head>
+<body>
+<h1>AstroOracle batch</h1>
 
-    <div>
-      <button onclick="exportJSON()">Export JSON</button>
-      <button onclick="exportCSV()">Export CSV</button>
-      <button onclick="clearAll()">Clear saved labels</button>
-      <span id="status"></span>
-    </div>
+<div>
+  <button onclick="exportJSON()">Export JSON</button>
+  <button onclick="exportCSV()">Export CSV</button>
+  <button onclick="clearAll()">Clear saved labels</button>
+  <span id="status"></span>
+</div>
 
-    <div id="root"></div>
+<div id="root"></div>
 
-    <!--__EMBEDDED_DATA__-->
+<script>
+const LABELS = [
+  ["real_anomaly", "Réel"],
+  ["artefact", "Artefact"],
+  ["known", "Connu"],
+  ["new_type", "Nouveau type"],
+  ["skip", "Skip"]
+];
 
-    <script>
-      const LABELS = [
-        ["real_anomaly", "Réel"],
-        ["artefact", "Artefact"],
-        ["known", "Connu"],
-        ["new_type", "Nouveau type"],
-        ["skip", "Skip"],
-      ];
+let annotations = JSON.parse(localStorage.getItem("astrooracle_annotations") || "{}");
 
-      const DEFAULT_CONFIG = {
-        pixels: 400,
-        radius_arcsec: 9.0,
-      };
+function setStatus(msg){ document.getElementById("status").textContent = " " + msg; }
 
-      let annotations = JSON.parse(localStorage.getItem("astrooracle_annotations") || "{}");
+function save(){
+  localStorage.setItem("astrooracle_annotations", JSON.stringify(annotations));
+  setStatus("saved");
+}
 
-      function setStatus(msg) {
-        document.getElementById("status").textContent = " " + msg;
-      }
+function slug(s){ return String(s).replace(/[^a-zA-Z0-9_-]/g, "_"); }
 
-      function save() {
-        localStorage.setItem("astrooracle_annotations", JSON.stringify(annotations));
-        setStatus("saved");
-      }
+function renderCard(c){
+  const id = c.id;
+  const key = String(id);
+  const a = annotations[key] || { label: "", comment: "" };
 
-      function slug(s) {
-        return String(s).replace(/[^a-zA-Z0-9_-]/g, "_");
-      }
+  const div = document.createElement("div");
+  div.className = "card";
 
-      function fmt(v, d = 3) {
-        if (v === null || v === undefined) return "";
-        const x = Number(v);
-        if (!isFinite(x)) return "";
-        return x.toFixed(d);
-      }
+  const h = document.createElement("div");
+  h.innerHTML = "<b>ID:</b> " + id + " | <b>score:</b> " + c.score.toFixed(4) +
+                " | <b>RA:</b> " + c.ra.toFixed(5) + " <b>Dec:</b> " + c.dec.toFixed(5);
+  div.appendChild(h);
 
-      function badge(txt, href = null) {
-        const span = document.createElement("span");
-        span.className = "badge";
-        if (href) {
-          const a = document.createElement("a");
-          a.href = href;
-          a.target = "_blank";
-          a.rel = "noopener noreferrer";
-          a.textContent = txt;
-          span.appendChild(a);
-        } else {
-          span.textContent = txt;
-        }
-        return span;
-      }
+  const imgs = document.createElement("div");
+  imgs.className = "imgs";
 
-      function addGaiaOverlay(wrap, c, cfg) {
-        const neigh = c.gaia_neighbors || [];
-        if (!Array.isArray(neigh) || neigh.length === 0) return;
+  (c.surveys || []).forEach(s => {
+    const im = document.createElement("img");
+    im.src = "cutouts/" + slug(id) + "_" + slug(s) + ".png";
+    im.alt = s;
+    imgs.appendChild(im);
+  });
+  div.appendChild(imgs);
 
-        neigh.forEach((g) => {
-          if (g === null || g === undefined) return;
-          const dx = Number(g.dx_arcsec);
-          const dy = Number(g.dy_arcsec);
-          if (!isFinite(dx) || !isFinite(dy)) return;
-
-          const x = 0.5 + dx / (2.0 * cfg.radius_arcsec);
-          const y = 0.5 - dy / (2.0 * cfg.radius_arcsec);
-          if (!(x >= -0.1 && x <= 1.1 && y >= -0.1 && y <= 1.1)) return;
-
-          const p = document.createElement("div");
-          p.className = "gpoint";
-          p.style.left = (x * 100.0).toFixed(3) + "%";
-          p.style.top = (y * 100.0).toFixed(3) + "%";
-
-          const gmag = Number(g.gmag);
-          if (isFinite(gmag)) {
-            const s = Math.max(4, Math.min(12, 14 - gmag));
-            p.style.width = s.toFixed(1) + "px";
-            p.style.height = s.toFixed(1) + "px";
-          }
-          wrap.appendChild(p);
-        });
-      }
-
-      function renderCard(c, cfg) {
-        const id = c.id;
-        const key = String(id);
-        const a = annotations[key] || { label: "", comment: "" };
-
-        const div = document.createElement("div");
-        div.className = "card";
-
-        const h = document.createElement("div");
-        h.innerHTML =
-          "<b>ID:</b> " +
-          id +
-          " | <b>rank:</b> " +
-          fmt(c.score, 4) +
-          " | <b>anom:</b> " +
-          fmt(c.anomaly_score, 4) +
-          " | <b>RA:</b> " +
-          fmt(c.ra, 5) +
-          " <b>Dec:</b> " +
-          fmt(c.dec, 5);
-        div.appendChild(h);
-
-        const meta = document.createElement("div");
-        meta.className = "meta";
-
-        const gaia = Number(c.gaia_match) > 0;
-        const simbad = Number(c.simbad_match) > 0;
-
-        if (gaia) {
-          meta.appendChild(badge("Gaia", c.gaia_link || null));
-          const d = fmt(c.nearest_gaia_dist_arcsec, 2);
-          if (d) meta.appendChild(badge("d=" + d + '″'));
-          const plx = fmt(c.gaia_parallax_mas, 2);
-          if (plx) meta.appendChild(badge("plx=" + plx + " mas"));
-          const pm = fmt(c.gaia_pmra_masyr, 1) + "," + fmt(c.gaia_pmdec_masyr, 1);
-          if (pm.replace(/[^0-9.-]/g, "").length > 0) meta.appendChild(badge("pm=" + pm));
-        }
-        if (simbad) {
-          const t = c.simbad_type ? String(c.simbad_type) : "SIMBAD";
-          meta.appendChild(badge(t, c.simbad_link || null));
-        }
-
-        const f = c.features || {};
-        if (f && typeof f === "object") {
-          if (f.feat_snr_max !== undefined) meta.appendChild(badge("SNRmax=" + fmt(f.feat_snr_max, 2)));
-          if (f.feat_spike_max !== undefined) meta.appendChild(badge("Spike=" + fmt(f.feat_spike_max, 2)));
-          if (f.feat_circularity_min !== undefined) meta.appendChild(badge("Circ=" + fmt(f.feat_circularity_min, 2)));
-          if (f.feat_color_dss2red_minus_2massj !== undefined)
-            meta.appendChild(badge("Color≈" + fmt(f.feat_color_dss2red_minus_2massj, 2)));
-        }
-
-        if (meta.childNodes.length > 0) div.appendChild(meta);
-
-        const imgs = document.createElement("div");
-        imgs.className = "imgs";
-
-        (c.surveys || []).forEach((s) => {
-          const wrap = document.createElement("div");
-          wrap.className = "imgwrap";
-
-          const im = document.createElement("img");
-          im.src = "cutouts/" + slug(id) + "_" + slug(s) + ".png";
-          im.alt = s;
-          im.title = s;
-          wrap.appendChild(im);
-
-          addGaiaOverlay(wrap, c, cfg);
-          imgs.appendChild(wrap);
-        });
-        div.appendChild(imgs);
-
-        const btns = document.createElement("div");
-        btns.className = "btns";
-        LABELS.forEach(([lab, txt]) => {
-          const b = document.createElement("button");
-          b.textContent = txt;
-          b.onclick = () => {
-            annotations[key] = annotations[key] || {};
-            annotations[key].label = lab;
-            annotations[key].ra = c.ra;
-            annotations[key].dec = c.dec;
-            annotations[key].anomaly_score = c.anomaly_score;
-            annotations[key].rank_score = c.score;
-            annotations[key].id = id;
-            annotations[key].annotated_at = new Date().toISOString();
-            save();
-            render();
-          };
-          btns.appendChild(b);
-        });
-        div.appendChild(btns);
-
-        const ta = document.createElement("textarea");
-        ta.placeholder = "Commentaire";
-        ta.value = a.comment || "";
-        ta.onchange = () => {
-          annotations[key] = annotations[key] || {};
-          annotations[key].comment = ta.value;
-          save();
-        };
-        div.appendChild(ta);
-
-        const s = document.createElement("div");
-        s.textContent = "Label actuel: " + (a.label || "(vide)");
-        div.appendChild(s);
-
-        return div;
-      }
-
-      function exportJSON() {
-        const blob = new Blob([JSON.stringify(annotations, null, 2)], { type: "application/json" });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "annotations.json";
-        a.click();
-      }
-
-      function exportCSV() {
-        const rows = Object.values(annotations);
-        const header = ["id", "ra", "dec", "anomaly_score", "rank_score", "label", "comment", "annotated_at"];
-        const csv = [header.join(",")]
-          .concat(
-            rows.map((r) => header.map((k) => JSON.stringify(r && k in r ? r[k] : "")).join(","))
-          )
-          .join("\n");
-        const blob = new Blob([csv], { type: "text/csv" });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "annotations.csv";
-        a.click();
-      }
-
-      function clearAll() {
-        if (confirm("Supprimer toutes les annotations sauvegardées (localStorage) ?")) {
-          annotations = {};
-          save();
-          render();
-        }
-      }
-
-      async function loadCandidates() {
-        const tag = document.getElementById("embedded-data");
-        if (tag && tag.textContent) {
-          try {
-            const parsed = JSON.parse(tag.textContent);
-            return parsed;
-          } catch (e) {}
-        }
-
-        const resp = await fetch("candidates.json");
-        const cs = await resp.json();
-        return { candidates: cs, ...DEFAULT_CONFIG };
-      }
-
-      async function render() {
-        const root = document.getElementById("root");
-        root.innerHTML = "";
-
-        const data = await loadCandidates();
-        const cs = data.candidates || [];
-        const cfg = {
-          pixels: Number(data.pixels) || DEFAULT_CONFIG.pixels,
-          radius_arcsec: Number(data.radius_arcsec) || DEFAULT_CONFIG.radius_arcsec,
-        };
-
-        cs.forEach((c) => root.appendChild(renderCard(c, cfg)));
-      }
-
+  const btns = document.createElement("div");
+  btns.className = "btns";
+  LABELS.forEach(([lab, txt]) => {
+    const b = document.createElement("button");
+    b.textContent = txt;
+    b.onclick = () => {
+      annotations[key] = annotations[key] || {};
+      annotations[key].label = lab;
+      annotations[key].ra = c.ra;
+      annotations[key].dec = c.dec;
+      annotations[key].anomaly_score = c.score;
+      annotations[key].id = id;
+      annotations[key].annotated_at = new Date().toISOString();
+      save();
       render();
-    </script>
-  </body>
+    };
+    btns.appendChild(b);
+  });
+  div.appendChild(btns);
+
+  const ta = document.createElement("textarea");
+  ta.placeholder = "Commentaire";
+  ta.value = a.comment || "";
+  ta.onchange = () => {
+    annotations[key] = annotations[key] || {};
+    annotations[key].comment = ta.value;
+    save();
+  };
+  div.appendChild(ta);
+
+  const s = document.createElement("div");
+  s.textContent = "Label actuel: " + (a.label || "(vide)");
+  div.appendChild(s);
+
+  return div;
+}
+
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(annotations, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "annotations.json";
+  a.click();
+}
+
+function exportCSV(){
+  const rows = Object.values(annotations);
+  const header = ["id","ra","dec","anomaly_score","label","comment","annotated_at"];
+  const csv = [header.join(",")].concat(rows.map(r =>
+    header.map(k => JSON.stringify((r && (k in r)) ? r[k] : "")).join(",")
+  )).join("\n");
+  const blob = new Blob([csv], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "annotations.csv";
+  a.click();
+}
+
+function clearAll(){
+  if(confirm("Supprimer toutes les annotations sauvegardées (localStorage) ?")){
+    annotations = {};
+    save();
+    render();
+  }
+}
+
+async function render(){
+  const root = document.getElementById("root");
+  root.innerHTML = "";
+  const resp = await fetch("candidates.json");
+  const cs = await resp.json();
+  cs.forEach(c => root.appendChild(renderCard(c)));
+}
+render();
+</script>
+</body>
 </html>

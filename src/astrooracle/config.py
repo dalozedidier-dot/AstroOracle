@@ -13,9 +13,6 @@ class RankingConfig:
     w_acq: float
     w_div: float
     w_prior: float
-    w_artifact: float
-    w_known: float
-    w_iforest: float
     acq_temperature: float
 
     @staticmethod
@@ -27,9 +24,6 @@ class RankingConfig:
             w_acq=0.35,
             w_div=0.20,
             w_prior=0.10,
-            w_artifact=0.0,
-            w_known=0.0,
-            w_iforest=0.0,
             acq_temperature=1.0,
         )
 

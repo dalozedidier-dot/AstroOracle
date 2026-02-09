@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import inspect
 from typing import List
 
 import numpy as np
@@ -54,25 +53,11 @@ def train_ensemble(
         present = set(int(v) for v in np.unique(y[idx]))
         missing = [lab for lab in all_labels if int(lab) not in present]
         if missing:
-            idx = np.concatenate(
-                [
-                    idx,
-                    np.array([per_class_idx[int(lab)] for lab in missing], dtype=int),
-                ]
-            )
+            idx = np.concatenate([idx, np.array([per_class_idx[int(lab)] for lab in missing], dtype=int)])
 
         Xm, ym = X[idx], y[idx]
 
-        lr_kwargs = {"max_iter": 2000}
-        try:
-            sig = inspect.signature(LogisticRegression)
-            if "multi_class" in sig.parameters:
-                lr_kwargs["multi_class"] = "auto"
-        except Exception:
-            # If signature inspection fails, keep defaults.
-            pass
-
-        base = LogisticRegression(**lr_kwargs)
+        base = LogisticRegression(max_iter=2000, multi_class="auto")
 
         unique, counts = np.unique(ym, return_counts=True)
         min_count = int(counts.min()) if len(counts) else 0
