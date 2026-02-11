@@ -40,12 +40,14 @@ def train_ensemble(
         present = set(int(v) for v in np.unique(y[idx]))
         missing = [lab for lab in all_labels if int(lab) not in present]
         if missing:
-            idx = np.concatenate([idx, np.array([per_class_idx[int(lab)] for lab in missing], dtype=int)])
+            idx = np.concatenate(
+                [idx, np.array([per_class_idx[int(lab)] for lab in missing], dtype=int)]
+            )
 
         Xm, ym = X[idx], y[idx]
 
         # scikit-learn 1.8 removed LogisticRegression(multi_class=...).
-        # Omitting it keeps behavior consistent across 1.7.x and 1.8+ (default is "auto"-like behavior).
+        # Omitting it keeps behavior consistent across 1.7.x and 1.8+.
         base = LogisticRegression(max_iter=2000, solver="lbfgs")
 
         unique, counts = np.unique(ym, return_counts=True)
