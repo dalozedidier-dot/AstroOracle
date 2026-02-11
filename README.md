@@ -60,6 +60,28 @@ astrooracle batch-html --candidates candidates.parquet --out-dir batch_out/ --n-
 
 Open `batch_out/index.html` and export annotations from the page.
 
+## Visualisation 3D interactive (Plotly)
+
+Générer une vue 3D HTML standalone pour trier visuellement les candidats :
+
+```bash
+astrooracle viz3d --input candidates.parquet --output viz3d.html --mode scatter --max-points 5000
+```
+
+Version “globe céleste” (projection RA/Dec sur une sphère) :
+
+```bash
+astrooracle viz3d --input candidates.parquet --output viz3d_globe.html --mode globe --max-points 5000
+```
+
+Avec cutouts dans le hover (après un `batch-html` qui a créé `out_dir/cutouts/`) :
+
+```bash
+astrooracle viz3d --input candidates.parquet --output viz3d_with_cutouts.html \
+  --mode scatter --cutouts-dir out_dir/cutouts --cutout-survey "DSS2 Red" --embed-cutouts
+```
+
+
 ## License
 
 MIT

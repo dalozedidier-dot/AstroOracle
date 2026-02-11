@@ -22,7 +22,7 @@ jobs:
       - name: Install
         run: |
           python -m pip install -U pip
-          pip install -e ".[dev]"
+          pip install -e ".[dev,plotly]"
 
       - name: Generate sample candidates
         run: |
@@ -32,6 +32,10 @@ jobs:
         run: |
           rm -rf demo_out
           astrooracle batch-html --candidates candidates.parquet --out-dir demo_out --n-query 12 --offline
+
+      - name: Generate demo viz3d (Plotly)
+        run: |
+          astrooracle viz3d --input candidates.parquet --output demo_out/viz3d_globe.html --mode globe --max-points 5000 --cdn
 
       - name: Upload demo artifacts
         uses: actions/upload-artifact@v4

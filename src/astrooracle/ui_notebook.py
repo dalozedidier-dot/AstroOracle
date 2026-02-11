@@ -36,7 +36,9 @@ class OracleUI:
         append_annotations_fn: Callable[[OracleConfig, List[Dict[str, Any]]], None],
     ):
         if w is None:
-            raise RuntimeError("ipywidgets not installed. Install extras: pip install -e '.[notebook]'")
+            raise RuntimeError(
+                "ipywidgets not installed. Install extras: pip install -e '.[notebook]'"
+            )
 
         self.cfg = cfg
         self.load_candidates = load_candidates_fn
@@ -49,7 +51,9 @@ class OracleUI:
         self.idx = 0
 
         self.title = w.HTML("")
-        self.comment = w.Textarea(description="Commentaire", layout=w.Layout(width="100%", height="80px"))
+        self.comment = w.Textarea(
+            description="Commentaire", layout=w.Layout(width="100%", height="80px")
+        )
         self.next_btn = w.Button(description="Next")
         self.reload_btn = w.Button(description="Reload candidates", button_style="info")
         self.out = w.Output()

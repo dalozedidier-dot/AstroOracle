@@ -26,23 +26,41 @@ def load_candidates(cfg: OracleConfig) -> pd.DataFrame:
 
 
 def select_candidates(df: pd.DataFrame, cfg: OracleConfig) -> pd.DataFrame:
-    """Select a query batch without mutating the candidate schema.
+    """Select a query batch for annotation.
 
-    Contract: the returned DataFrame preserves the *input* columns and their order.
-    Ranking may compute intermediate columns internally (rank_score, etc.) but they are
-    not exposed here to keep selection a pure filtering operation.
+    The returned DataFrame keeps the caller-provided columns first (same order),
+    and appends a small set of useful ranking diagnostics (e.g. `rank_score`) when
+    available.
     """
     model = load_model(cfg.model_path)
     ranked, _ = rank_candidates(df, cfg, model=model)
     selected = select_batch(ranked, cfg, k=cfg.n_query)
 
-    # Preserve the caller-provided schema (order + subset).
     base_cols = [c for c in df.columns if c in selected.columns]
-    return selected.loc[:, base_cols].reset_index(drop=True)
+
+    extra_cols = [
+        c
+        for c in (
+            "rank_score",
+            "score_anomaly",
+            "score_acq",
+            "score_prior",
+            "score_div_proxy",
+            "p_max",
+            "y_hat",
+        )
+        if c in selected.columns and c not in base_cols
+    ]
+
+    return selected.loc[:, base_cols + extra_cols].reset_index(drop=True)
 
 
 def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tuple[str, np.ndarray]]:
-    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {"1", "true", "yes"}
+    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {
+        "1",
+        "true",
+        "yes",
+    }
     results: List[Tuple[str, np.ndarray]] = []
 
     if offline:

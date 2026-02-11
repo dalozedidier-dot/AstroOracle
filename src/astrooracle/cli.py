@@ -23,7 +23,11 @@ from .stats import annotation_stats, log_stats
 def _make_cfg(args: argparse.Namespace) -> OracleConfig:
     cfg0 = OracleConfig.default()
     save_dir = Path(args.save_cutouts) if args.save_cutouts else None
-    cutout_radius = cfg0.cutout_radius_arcmin if args.cutout_radius_arcmin is None else float(args.cutout_radius_arcmin)
+    cutout_radius = (
+        cfg0.cutout_radius_arcmin
+        if args.cutout_radius_arcmin is None
+        else float(args.cutout_radius_arcmin)
+    )
 
     ranking = RankingConfig(
         strategy=str(args.acq),
@@ -54,23 +58,42 @@ def _make_cfg(args: argparse.Namespace) -> OracleConfig:
     )
 
 
-def maybe_retrain(cfg: OracleConfig, session_id: str | None = None, annotator_id: str | None = None) -> None:
+def maybe_retrain(
+    cfg: OracleConfig, session_id: str | None = None, annotator_id: str | None = None
+) -> None:
     total = count_labels(cfg)
     cursor = get_retrain_cursor(cfg)
     new_since = total - cursor
     if new_since >= cfg.min_new_labels_for_retrain:
         print(f"Retrain triggered: {new_since} new labels.")
-        log_event(cfg, {"event": "retrain_triggered", "new_labels": new_since, "total_labels": total}, session_id=session_id, annotator_id=annotator_id)
+        log_event(
+            cfg,
+            {"event": "retrain_triggered", "new_labels": new_since, "total_labels": total},
+            session_id=session_id,
+            annotator_id=annotator_id,
+        )
         try:
             subprocess.run(["python", str(cfg.retrain_script)], check=True)
             set_retrain_cursor(cfg, total)
-            log_event(cfg, {"event": "retrain_success"}, session_id=session_id, annotator_id=annotator_id)
+            log_event(
+                cfg, {"event": "retrain_success"}, session_id=session_id, annotator_id=annotator_id
+            )
         except Exception as e:
-            log_event(cfg, {"event": "retrain_failed", "error": str(e)}, session_id=session_id, annotator_id=annotator_id)
+            log_event(
+                cfg,
+                {"event": "retrain_failed", "error": str(e)},
+                session_id=session_id,
+                annotator_id=annotator_id,
+            )
             print(f"Retrain failed: {e}")
 
 
-def annotate_batch(cfg: OracleConfig, top: pd.DataFrame, session_id: str | None = None, annotator_id: str | None = None) -> None:
+def annotate_batch(
+    cfg: OracleConfig,
+    top: pd.DataFrame,
+    session_id: str | None = None,
+    annotator_id: str | None = None,
+) -> None:
     label_map = {"r": "real_anomaly", "a": "artefact", "c": "known", "j": "new_type", "u": "unsure"}
 
     new_rows = []
@@ -95,7 +118,11 @@ def annotate_batch(cfg: OracleConfig, top: pd.DataFrame, session_id: str | None 
         render_cutouts_matplotlib(cutouts, title, cfg, save_path=save_path)
 
         while True:
-            choice = input("Label ? [r]éel [a]rtefact [c]onnu [j]nouveau type [u]incertain [s]kip -> ").strip().lower()
+            choice = (
+                input("Label ? [r]éel [a]rtefact [c]onnu [j]nouveau type [u]incertain [s]kip -> ")
+                .strip()
+                .lower()
+            )
             if choice in {"r", "a", "c", "j", "u", "s"}:
                 break
 
@@ -124,7 +151,12 @@ def annotate_batch(cfg: OracleConfig, top: pd.DataFrame, session_id: str | None 
 
     if new_rows:
         append_annotations(cfg, new_rows)
-        log_event(cfg, {"event": "new_annotations", "count": len(new_rows)}, session_id=session_id, annotator_id=annotator_id)
+        log_event(
+            cfg,
+            {"event": "new_annotations", "count": len(new_rows)},
+            session_id=session_id,
+            annotator_id=annotator_id,
+        )
         maybe_retrain(cfg, session_id=session_id, annotator_id=annotator_id)
 
 
@@ -132,7 +164,12 @@ def cmd_run(args: argparse.Namespace) -> None:
     cfg = _make_cfg(args)
     session_id = args.session_id
     annotator_id = args.annotator_id
-    log_event(cfg, {"event": "oracle_started", "mode": "poll"}, session_id=session_id, annotator_id=annotator_id)
+    log_event(
+        cfg,
+        {"event": "oracle_started", "mode": "poll"},
+        session_id=session_id,
+        annotator_id=annotator_id,
+    )
     print(f"AstroOracle running. candidates={cfg.candidates_path} interval={cfg.check_interval_s}s")
 
     while True:
@@ -143,11 +180,18 @@ def cmd_run(args: argparse.Namespace) -> None:
                 if not top.empty:
                     annotate_batch(cfg, top, session_id=session_id, annotator_id=annotator_id)
         except KeyboardInterrupt:
-            log_event(cfg, {"event": "oracle_stopped"}, session_id=session_id, annotator_id=annotator_id)
+            log_event(
+                cfg, {"event": "oracle_stopped"}, session_id=session_id, annotator_id=annotator_id
+            )
             print("Stopped.")
             break
         except Exception as e:
-            log_event(cfg, {"event": "error", "msg": str(e)}, session_id=session_id, annotator_id=annotator_id)
+            log_event(
+                cfg,
+                {"event": "error", "msg": str(e)},
+                session_id=session_id,
+                annotator_id=annotator_id,
+            )
             print(f"Error: {e}")
 
         time.sleep(cfg.check_interval_s)
@@ -157,7 +201,12 @@ def cmd_watch(args: argparse.Namespace) -> None:
     cfg = _make_cfg(args)
     session_id = args.session_id
     annotator_id = args.annotator_id
-    log_event(cfg, {"event": "oracle_started", "mode": "watch"}, session_id=session_id, annotator_id=annotator_id)
+    log_event(
+        cfg,
+        {"event": "oracle_started", "mode": "watch"},
+        session_id=session_id,
+        annotator_id=annotator_id,
+    )
     print(f"AstroOracle watching {cfg.candidates_path}")
 
     def _on_change():
@@ -168,7 +217,12 @@ def cmd_watch(args: argparse.Namespace) -> None:
                 if not top.empty:
                     annotate_batch(cfg, top, session_id=session_id, annotator_id=annotator_id)
         except Exception as e:
-            log_event(cfg, {"event": "error", "msg": str(e)}, session_id=session_id, annotator_id=annotator_id)
+            log_event(
+                cfg,
+                {"event": "error", "msg": str(e)},
+                session_id=session_id,
+                annotator_id=annotator_id,
+            )
             print(f"Error: {e}")
 
     watch_candidates(cfg.candidates_path, _on_change)
@@ -196,15 +250,47 @@ def cmd_batch_html(args: argparse.Namespace) -> None:
 def cmd_train(args: argparse.Namespace) -> None:
     cfg = _make_cfg(args)
     metrics = train_from_files(cfg)
-    log_event(cfg, {"event": "train", "metrics": {"ece": metrics.get("ece"), "n_train": metrics.get("n_train")}})
+    log_event(
+        cfg,
+        {
+            "event": "train",
+            "metrics": {"ece": metrics.get("ece"), "n_train": metrics.get("n_train")},
+        },
+    )
     print(json.dumps(metrics, indent=2, ensure_ascii=False))
 
 
 def cmd_stats(args: argparse.Namespace) -> None:
     cfg = _make_cfg(args)
     a = annotation_stats(cfg)
-    l = log_stats(cfg)
-    print(json.dumps({"annotations": a, "logs": l}, indent=2, ensure_ascii=False))
+    logs = log_stats(cfg)
+    print(json.dumps({"annotations": a, "logs": logs}, indent=2, ensure_ascii=False))
+
+
+def cmd_viz3d(args: argparse.Namespace) -> None:
+    in_path = Path(args.input)
+    out_path = Path(args.output)
+
+    from .viz3d import build_viz3d_figure, load_candidates_table, write_viz3d_html
+
+    df = load_candidates_table(in_path)
+    if df.empty:
+        print("No candidates.")
+        return
+
+    cut_dir = Path(args.cutouts_dir) if args.cutouts_dir else None
+    fig = build_viz3d_figure(
+        df,
+        mode=str(args.mode),
+        max_points=int(args.max_points),
+        color=args.color,
+        cutouts_dir=cut_dir,
+        cutout_survey=args.cutout_survey,
+        embed_cutouts=bool(args.embed_cutouts),
+        title=args.title,
+    )
+    write_viz3d_html(fig, out_path, cdn=bool(args.cdn))
+    print(f"viz3d written: {out_path}")
 
 
 def cmd_serve(args: argparse.Namespace) -> None:
@@ -234,7 +320,9 @@ def main() -> None:
         sp.add_argument("--survey", action="append", default=["DSS2 Red", "2MASS J"])
         sp.add_argument("--no-gui", action="store_true")
         sp.add_argument("--save-cutouts", default=None)
-        sp.add_argument("--offline", action="store_true", help="Use synthetic cutouts (no network).")
+        sp.add_argument(
+            "--offline", action="store_true", help="Use synthetic cutouts (no network)."
+        )
 
         sp.add_argument("--session-id", default=None)
         sp.add_argument("--annotator-id", default=None)
@@ -267,6 +355,29 @@ def main() -> None:
     sp_stats = sub.add_parser("stats", help="Quick stats from annotations and logs.")
     add_common(sp_stats)
     sp_stats.set_defaults(fn=cmd_stats)
+
+    sp_viz = sub.add_parser("viz3d", help="Generate an interactive Plotly 3D visualization (HTML).")
+    sp_viz.add_argument("--input", default="candidates.parquet")
+    sp_viz.add_argument("--output", default="viz3d.html")
+    sp_viz.add_argument("--mode", default="scatter", choices=["scatter", "globe"])
+    sp_viz.add_argument(
+        "--color", default=None, help="Column name to color by (e.g. label_pred, uncertainty)."
+    )
+    sp_viz.add_argument("--max-points", type=int, default=5000)
+    sp_viz.add_argument(
+        "--cutouts-dir",
+        default=None,
+        help="Folder containing cutout PNGs (e.g. batch_out/cutouts).",
+    )
+    sp_viz.add_argument("--cutout-survey", default="DSS2 Red")
+    sp_viz.add_argument(
+        "--embed-cutouts", action="store_true", help="Embed cutouts as base64 in hover."
+    )
+    sp_viz.add_argument(
+        "--cdn", action="store_true", help="Use Plotly CDN instead of embedding JS."
+    )
+    sp_viz.add_argument("--title", default=None)
+    sp_viz.set_defaults(fn=cmd_viz3d)
 
     sp_serve = sub.add_parser("serve", help="Run the FastAPI server.")
     add_common(sp_serve)

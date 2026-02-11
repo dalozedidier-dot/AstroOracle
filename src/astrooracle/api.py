@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-from pathlib import Path
+import json
 from typing import List, Optional
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from .annotations import append_annotations
 from .config import OracleConfig
+from .logging_utils import log_event
 from .model_io import load_model
 from .ranking import rank_candidates, select_batch
 from .schemas import AnnotationRecord, CandidateRecord
-from .annotations import append_annotations
-from .logging_utils import log_event
 
 
 class RankRequest(BaseModel):
@@ -57,5 +57,31 @@ def create_app(cfg: Optional[OracleConfig] = None) -> FastAPI:
         append_annotations(cfg, [r.model_dump() for r in rows])
         log_event(cfg, {"event": "api_annotate", "count": len(rows)})
         return {"ok": True, "count": len(rows)}
+
+    @app.get("/viz3d")
+    def viz3d(
+        mode: str = "scatter",
+        max_points: int = 5000,
+        color: Optional[str] = None,
+    ):
+        """Return a Plotly figure JSON for interactive 3D triage.
+
+        This endpoint is optional: it requires the `plotly` extra. If Plotly is not
+        installed, it returns HTTP 501 with a helpful message.
+        """
+        try:
+            from .viz3d import build_viz3d_figure, load_candidates_table
+        except Exception as e:  # pragma: no cover
+            raise HTTPException(
+                status_code=501,
+                detail=f"Plotly viz3d not available: {e}. Install extras: pip install -e '.[plotly]'",
+            ) from e
+
+        df = load_candidates_table(cfg.candidates_path)
+        if df.empty:
+            return {"data": [], "layout": {"title": {"text": "No candidates"}}}
+
+        fig = build_viz3d_figure(df, mode=mode, max_points=max_points, color=color)
+        return json.loads(fig.to_json())
 
     return app
