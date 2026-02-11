@@ -1,21 +1,22 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+import numpy as np
 import pandas as pd
 
 
 def _read_candidates(path: str) -> pd.DataFrame:
-    p = str(path)
-    if p.endswith(".parquet"):
-        return pd.read_parquet(p)
-    if p.endswith(".csv"):
-        return pd.read_csv(p)
-    raise ValueError("Unsupported candidates format. Expected .parquet or .csv")
+    if path.endswith(".parquet"):
+        return pd.read_parquet(path)
+    if path.endswith(".csv"):
+        return pd.read_csv(path)
+    raise ValueError("Unsupported candidates format (expected .parquet or .csv)")
 
 
 def _first_existing_col(df: pd.DataFrame, candidates: Sequence[str]) -> Optional[str]:
@@ -39,14 +40,44 @@ def _safe_read_bytes(path: Path) -> Optional[bytes]:
         return None
 
 
+def _synthetic_cutouts(
+    ra_deg: float,
+    dec_deg: float,
+    tags: Sequence[str],
+    pixels: int,
+) -> List[Tuple[str, np.ndarray]]:
+    """Deterministic synthetic cutouts (offline / fallback)."""
+    out: List[Tuple[str, np.ndarray]] = []
+    for tag in tags:
+        key = f"{ra_deg:.6f}|{dec_deg:.6f}|{tag}"
+        seed = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
+        rng = np.random.default_rng(seed)
+
+        n = int(pixels)
+        yy, xx = np.mgrid[0:n, 0:n]
+        cx = rng.uniform(0.35 * n, 0.65 * n)
+        cy = rng.uniform(0.35 * n, 0.65 * n)
+        sx = rng.uniform(0.06 * n, 0.12 * n)
+        sy = rng.uniform(0.06 * n, 0.12 * n)
+
+        blob = np.exp(
+            -(
+                ((xx - cx) ** 2) / (2 * sx**2)
+                + ((yy - cy) ** 2) / (2 * sy**2)
+            )
+        )
+        noise = rng.normal(0, 0.05, size=(n, n))
+        bg = rng.normal(0, 0.01, size=(n, n))
+        img = (0.8 * blob + noise + bg).astype(float)
+        out.append((tag, img))
+    return out
+
+
 def _guess_cutout_pairs(
     cutouts_dir: Path,
     cand_id: str,
 ) -> Tuple[Optional[Path], Optional[Path], List[Path]]:
-    """Return (normal_path, anomalous_path, all_matches).
-
-    Heuristic: pick first two matches as (normal, anomalous).
-    """
+    """Heuristic: take first two matching PNGs for an id as (left, right)."""
     if not cutouts_dir.exists():
         return None, None, []
 
@@ -56,29 +87,27 @@ def _guess_cutout_pairs(
         if pat.search(p.name):
             matches.append(p)
 
-    normal = matches[0] if len(matches) >= 1 else None
-    anomalous = matches[1] if len(matches) >= 2 else None
-    return normal, anomalous, matches
+    left = matches[0] if len(matches) >= 1 else None
+    right = matches[1] if len(matches) >= 2 else None
+    return left, right, matches
 
 
-def _img_widget_from_path(path: Optional[Path], width: int = 256, height: int = 256):
-    import ipywidgets as widgets
+def _img_widget_from_path(path: Optional[Path], width: int, height: int):
+    import ipywidgets as widgets  # lazy import
 
     if path is None:
         return widgets.HTML(
-            f"<div style='width:{width}px;height:{height}px;"
-            "display:flex;align-items:center;justify-content:center;"
-            "border:1px solid #ddd;border-radius:8px;'>"
-            "<span style='color:#666;'>No image</span></div>"
+            f"""<div style="width:{width}px;height:{height}px;display:flex;
+            align-items:center;justify-content:center;border:1px solid #ddd;
+            border-radius:8px;"><span style="color:#666;">No image</span></div>"""
         )
 
     raw = _safe_read_bytes(path)
     if raw is None:
         return widgets.HTML(
-            f"<div style='width:{width}px;height:{height}px;"
-            "display:flex;align-items:center;justify-content:center;"
-            "border:1px solid #ddd;border-radius:8px;'>"
-            "<span style='color:#666;'>Unreadable</span></div>"
+            f"""<div style="width:{width}px;height:{height}px;display:flex;
+            align-items:center;justify-content:center;border:1px solid #ddd;
+            border-radius:8px;"><span style="color:#666;">Unreadable</span></div>"""
         )
 
     return widgets.Image(
@@ -89,7 +118,7 @@ def _img_widget_from_path(path: Optional[Path], width: int = 256, height: int = 
 
 
 def _build_meta_html(row: pd.Series, cols: Sequence[str]) -> str:
-    items = []
+    items: List[str] = []
     for c in cols:
         if c not in row.index:
             continue
@@ -98,16 +127,17 @@ def _build_meta_html(row: pd.Series, cols: Sequence[str]) -> str:
             items.append(f"<tr><td><b>{c}</b></td><td>{v:.6g}</td></tr>")
         else:
             items.append(f"<tr><td><b>{c}</b></td><td>{v}</td></tr>")
+
     return (
-        "<div style='border:1px solid #eee;border-radius:10px;padding:10px;'>"
-        "<table style='border-collapse:collapse;width:100%;'>"
+        '<div style="border:1px solid #eee;border-radius:10px;padding:10px;">'
+        '<table style="border-collapse:collapse;width:100%;">'
         + "".join(items)
         + "</table></div>"
     )
 
 
 def _make_uncertainty_figure(df_top: pd.DataFrame, id_col: str, u_col: str):
-    import plotly.graph_objects as go
+    import plotly.graph_objects as go  # lazy import
 
     x = [str(v) for v in df_top[id_col].tolist()]
     y = [_as_float(v) for v in df_top[u_col].tolist()]
@@ -125,8 +155,9 @@ def _make_uncertainty_figure(df_top: pd.DataFrame, id_col: str, u_col: str):
 
 def _highlight_bar(fig, selected_x: str) -> None:
     xs = list(fig.data[0].x)
-    opacity = [1.0 if str(x) == str(selected_x) else 0.35 for x in xs]
-    fig.data[0].marker.opacity = opacity
+    fig.data[0].marker.opacity = [
+        1.0 if str(x) == str(selected_x) else 0.35 for x in xs
+    ]
 
 
 @dataclass
@@ -140,42 +171,44 @@ class TriageWidgetConfig:
 
 class TriageWidget:
     def __init__(self, cfg: TriageWidgetConfig):
-        import ipywidgets as widgets
+        import ipywidgets as widgets  # notebook-only
 
         self.cfg = cfg
         self.df = _read_candidates(cfg.candidates_path).copy()
 
         self.id_col = _first_existing_col(
-            self.df,
-            ["id", "source_id", "candidate_id", "obj_id"],
+            self.df, ["id", "source_id", "candidate_id", "obj_id"]
         )
         if self.id_col is None:
             raise ValueError(
-                "No id column found. Expected one of: id, source_id, candidate_id, obj_id"
+                "No id column found. Expected one of: "
+                "id, source_id, candidate_id, obj_id"
             )
 
         self.rank_col = _first_existing_col(
-            self.df,
-            ["rank", "rank_score", "score", "anomaly_score"],
-        )
-        if self.rank_col is None:
-            self.rank_col = self.id_col
+            self.df, ["rank", "rank_score", "score", "anomaly_score"]
+        ) or self.id_col
 
         self.u_col = _first_existing_col(
-            self.df,
-            ["uncertainty", "uncertainty_score", "entropy", "prob_margin"],
+            self.df, ["uncertainty", "uncertainty_score", "entropy", "prob_margin"]
         )
         if self.u_col is None:
-            num_cols = [c for c in self.df.columns if pd.api.types.is_numeric_dtype(self.df[c])]
+            num_cols = [
+                c
+                for c in self.df.columns
+                if pd.api.types.is_numeric_dtype(self.df[c])
+            ]
             self.u_col = num_cols[0] if num_cols else self.rank_col
 
         if "rank" in self.rank_col.lower() and "score" not in self.rank_col.lower():
-            self.df_sorted = self.df.sort_values(self.rank_col, ascending=True).reset_index(
-                drop=True
+            self.df_sorted = (
+                self.df.sort_values(self.rank_col, ascending=True)
+                .reset_index(drop=True)
             )
         else:
-            self.df_sorted = self.df.sort_values(self.rank_col, ascending=False).reset_index(
-                drop=True
+            self.df_sorted = (
+                self.df.sort_values(self.rank_col, ascending=False)
+                .reset_index(drop=True)
             )
 
         self.df_top = self.df_sorted.head(int(cfg.top_k)).copy()
@@ -188,44 +221,72 @@ class TriageWidget:
             layout=widgets.Layout(width="320px"),
         )
 
-        self.btn_prev = widgets.Button(description="Prev", layout=widgets.Layout(width="80px"))
-        self.btn_next = widgets.Button(description="Next", layout=widgets.Layout(width="80px"))
-        self.btn_save = widgets.Button(description="Save review", layout=widgets.Layout(width="140px"))
+        self.btn_prev = widgets.Button(
+            description="Prev",
+            layout=widgets.Layout(width="80px"),
+        )
+        self.btn_next = widgets.Button(
+            description="Next",
+            layout=widgets.Layout(width="80px"),
+        )
+        self.btn_save = widgets.Button(
+            description="Save review", layout=widgets.Layout(width="140px")
+        )
 
         self.label_ok = widgets.ToggleButton(description="OK", value=False)
         self.label_anom = widgets.ToggleButton(description="Anomalous", value=False)
         self.label_skip = widgets.ToggleButton(description="Skip", value=False)
 
-        self.img_left = _img_widget_from_path(None, width=cfg.image_size, height=cfg.image_size)
-        self.img_right = _img_widget_from_path(None, width=cfg.image_size, height=cfg.image_size)
+        self.img_left = _img_widget_from_path(
+            None,
+            width=cfg.image_size,
+            height=cfg.image_size,
+        )
+        self.img_right = _img_widget_from_path(
+            None,
+            width=cfg.image_size,
+            height=cfg.image_size,
+        )
 
         self.meta = widgets.HTML(value="")
         self.msg = widgets.HTML(value="")
 
         self.fig = _make_uncertainty_figure(self.df_top, self.id_col, self.u_col)
 
-        self._review: Dict[str, Dict[str, Any]] = self._load_review(cfg.review_save_path)
+        self._review: Dict[str, Dict[str, Any]] = self._load_review(
+            cfg.review_save_path
+        )
+
+        self._wire_events()
+
+        if len(self.select.options) > 0:
+            self.select.value = self.select.options[0]
+            self._render_selected(str(self.select.value))
 
         self.ui = widgets.VBox(
             [
                 widgets.HBox(
                     [
                         self.select,
-                        widgets.VBox([widgets.HBox([self.btn_prev, self.btn_next, self.btn_save])]),
+                        widgets.VBox(
+                            [
+                                widgets.HBox(
+                                    [self.btn_prev, self.btn_next, self.btn_save]
+                                )
+                            ]
+                        ),
                     ]
                 ),
                 widgets.HBox(
                     [
-                        widgets.VBox(
-                            [widgets.HTML("<b>Cutout A (normal/reference)</b>"), self.img_left]
-                        ),
-                        widgets.VBox(
-                            [widgets.HTML("<b>Cutout B (anomalous/contrast)</b>"), self.img_right]
-                        ),
+                        widgets.VBox([widgets.HTML("<b>Cutout A</b>"), self.img_left]),
+                        widgets.VBox([widgets.HTML("<b>Cutout B</b>"), self.img_right]),
                         widgets.VBox(
                             [
                                 widgets.HTML("<b>Labels</b>"),
-                                widgets.HBox([self.label_ok, self.label_anom, self.label_skip]),
+                                widgets.HBox(
+                                    [self.label_ok, self.label_anom, self.label_skip]
+                                ),
                                 widgets.HTML("<b>Metadata</b>"),
                                 self.meta,
                             ],
@@ -237,12 +298,6 @@ class TriageWidget:
                 self.msg,
             ]
         )
-
-        self._wire_events()
-
-        if len(self.select.options) > 0:
-            self.select.value = self.select.options[0]
-            self._render_selected(self.select.value)
 
     def display(self) -> None:
         from IPython.display import display
@@ -285,8 +340,7 @@ class TriageWidget:
 
     def _on_label_change(self, _change) -> None:
         cand_id = str(self.select.value)
-        if cand_id not in self._review:
-            self._review[cand_id] = {}
+        self._review.setdefault(cand_id, {})
 
         if self.label_ok.value:
             self.label_anom.value = False
@@ -311,7 +365,7 @@ class TriageWidget:
             json.dumps(self._review, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
-        self.msg.value = f"<div style='color:#1a7f37;'><b>Saved</b> to {out}</div>"
+        self.msg.value = f'<div style="color:#1a7f37;"><b>Saved</b> to {out}</div>'
 
     def _render_selected(self, cand_id: str) -> None:
         row = self.df_top[self.df_top[self.id_col].astype(str) == str(cand_id)]
@@ -319,20 +373,22 @@ class TriageWidget:
             return
         r = row.iloc[0]
 
-        normal, anomalous, matches = _guess_cutout_pairs(self.cutouts_dir, cand_id)
+        left, right, matches = _guess_cutout_pairs(self.cutouts_dir, cand_id)
 
-        self.img_left = _img_widget_from_path(
-            normal, width=self.cfg.image_size, height=self.cfg.image_size
+        new_left = _img_widget_from_path(
+            left,
+            width=self.cfg.image_size,
+            height=self.cfg.image_size,
         )
-        self.img_right = _img_widget_from_path(
-            anomalous, width=self.cfg.image_size, height=self.cfg.image_size
+        new_right = _img_widget_from_path(
+            right, width=self.cfg.image_size, height=self.cfg.image_size
         )
 
         img_hbox = self.ui.children[1]
         left_vbox = img_hbox.children[0]
         right_vbox = img_hbox.children[1]
-        left_vbox.children = (left_vbox.children[0], self.img_left)
-        right_vbox.children = (right_vbox.children[0], self.img_right)
+        left_vbox.children = (left_vbox.children[0], new_left)
+        right_vbox.children = (right_vbox.children[0], new_right)
 
         meta_cols = [self.id_col, self.rank_col, self.u_col]
         for c in ["ra", "dec", "label_pred", "prob", "score", "anomaly_score"]:
@@ -350,15 +406,15 @@ class TriageWidget:
 
         extra = ""
         if matches:
-            extra = "<br/>".join([m.name for m in matches[:8]])
+            shown = matches[:8]
+            extra = "<br/>".join([m.name for m in shown])
             if len(matches) > 8:
                 extra += "<br/>..."
 
         self.msg.value = (
-            f"<div style='color:#555;'>"
-            f"Selected: <b>{cand_id}</b> (cutouts found: {len(matches)})"
-            f"{('<br/><b>Matches</b><br/>' + extra) if extra else ''}"
-            f"</div>"
+            f'<div style="color:#555;">Selected: <b>{cand_id}</b> '
+            f"(cutouts found: {len(matches)})"
+            f"{('<br/><b>Matches</b><br/>' + extra) if extra else ''}</div>"
         )
 
     @staticmethod
