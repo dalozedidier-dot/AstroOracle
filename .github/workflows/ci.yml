@@ -24,7 +24,7 @@ jobs:
       - name: Lint
         run: |
           ruff check .
-          black --check . --extend-exclude '^src/null_trace\.py$'
+          black --check . --extend-exclude '(^|.*/)src/null_trace\.py$'
       - name: Tests
         run: |
           pytest -q
