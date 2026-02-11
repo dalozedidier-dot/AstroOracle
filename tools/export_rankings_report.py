@@ -139,9 +139,7 @@ def build_html(
         f"<th>{html.escape(rank_col)}</th>"
         f"{u_head}"
         "<th>Cutouts</th>"
-        "</tr></thead><tbody>"
-        + "".join(rows)
-        + "</tbody></table></body></html>"
+        "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></body></html>"
     )
     return html_doc
 

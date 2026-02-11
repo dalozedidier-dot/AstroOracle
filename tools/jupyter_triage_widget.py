@@ -60,12 +60,7 @@ def _synthetic_cutouts(
         sx = rng.uniform(0.06 * n, 0.12 * n)
         sy = rng.uniform(0.06 * n, 0.12 * n)
 
-        blob = np.exp(
-            -(
-                ((xx - cx) ** 2) / (2 * sx**2)
-                + ((yy - cy) ** 2) / (2 * sy**2)
-            )
-        )
+        blob = np.exp(-(((xx - cx) ** 2) / (2 * sx**2) + ((yy - cy) ** 2) / (2 * sy**2)))
         noise = rng.normal(0, 0.05, size=(n, n))
         bg = rng.normal(0, 0.01, size=(n, n))
         img = (0.8 * blob + noise + bg).astype(float)
@@ -96,19 +91,15 @@ def _img_widget_from_path(path: Optional[Path], width: int, height: int):
     import ipywidgets as widgets  # lazy import
 
     if path is None:
-        return widgets.HTML(
-            f"""<div style="width:{width}px;height:{height}px;display:flex;
+        return widgets.HTML(f"""<div style="width:{width}px;height:{height}px;display:flex;
             align-items:center;justify-content:center;border:1px solid #ddd;
-            border-radius:8px;"><span style="color:#666;">No image</span></div>"""
-        )
+            border-radius:8px;"><span style="color:#666;">No image</span></div>""")
 
     raw = _safe_read_bytes(path)
     if raw is None:
-        return widgets.HTML(
-            f"""<div style="width:{width}px;height:{height}px;display:flex;
+        return widgets.HTML(f"""<div style="width:{width}px;height:{height}px;display:flex;
             align-items:center;justify-content:center;border:1px solid #ddd;
-            border-radius:8px;"><span style="color:#666;">Unreadable</span></div>"""
-        )
+            border-radius:8px;"><span style="color:#666;">Unreadable</span></div>""")
 
     return widgets.Image(
         value=raw,
@@ -130,9 +121,7 @@ def _build_meta_html(row: pd.Series, cols: Sequence[str]) -> str:
 
     return (
         '<div style="border:1px solid #eee;border-radius:10px;padding:10px;">'
-        '<table style="border-collapse:collapse;width:100%;">'
-        + "".join(items)
-        + "</table></div>"
+        '<table style="border-collapse:collapse;width:100%;">' + "".join(items) + "</table></div>"
     )
 
 
@@ -155,9 +144,7 @@ def _make_uncertainty_figure(df_top: pd.DataFrame, id_col: str, u_col: str):
 
 def _highlight_bar(fig, selected_x: str) -> None:
     xs = list(fig.data[0].x)
-    fig.data[0].marker.opacity = [
-        1.0 if str(x) == str(selected_x) else 0.35 for x in xs
-    ]
+    fig.data[0].marker.opacity = [1.0 if str(x) == str(selected_x) else 0.35 for x in xs]
 
 
 @dataclass
@@ -176,39 +163,31 @@ class TriageWidget:
         self.cfg = cfg
         self.df = _read_candidates(cfg.candidates_path).copy()
 
-        self.id_col = _first_existing_col(
-            self.df, ["id", "source_id", "candidate_id", "obj_id"]
-        )
+        self.id_col = _first_existing_col(self.df, ["id", "source_id", "candidate_id", "obj_id"])
         if self.id_col is None:
             raise ValueError(
-                "No id column found. Expected one of: "
-                "id, source_id, candidate_id, obj_id"
+                "No id column found. Expected one of: " "id, source_id, candidate_id, obj_id"
             )
 
-        self.rank_col = _first_existing_col(
-            self.df, ["rank", "rank_score", "score", "anomaly_score"]
-        ) or self.id_col
+        self.rank_col = (
+            _first_existing_col(self.df, ["rank", "rank_score", "score", "anomaly_score"])
+            or self.id_col
+        )
 
         self.u_col = _first_existing_col(
             self.df, ["uncertainty", "uncertainty_score", "entropy", "prob_margin"]
         )
         if self.u_col is None:
-            num_cols = [
-                c
-                for c in self.df.columns
-                if pd.api.types.is_numeric_dtype(self.df[c])
-            ]
+            num_cols = [c for c in self.df.columns if pd.api.types.is_numeric_dtype(self.df[c])]
             self.u_col = num_cols[0] if num_cols else self.rank_col
 
         if "rank" in self.rank_col.lower() and "score" not in self.rank_col.lower():
-            self.df_sorted = (
-                self.df.sort_values(self.rank_col, ascending=True)
-                .reset_index(drop=True)
+            self.df_sorted = self.df.sort_values(self.rank_col, ascending=True).reset_index(
+                drop=True
             )
         else:
-            self.df_sorted = (
-                self.df.sort_values(self.rank_col, ascending=False)
-                .reset_index(drop=True)
+            self.df_sorted = self.df.sort_values(self.rank_col, ascending=False).reset_index(
+                drop=True
             )
 
         self.df_top = self.df_sorted.head(int(cfg.top_k)).copy()
@@ -253,9 +232,7 @@ class TriageWidget:
 
         self.fig = _make_uncertainty_figure(self.df_top, self.id_col, self.u_col)
 
-        self._review: Dict[str, Dict[str, Any]] = self._load_review(
-            cfg.review_save_path
-        )
+        self._review: Dict[str, Dict[str, Any]] = self._load_review(cfg.review_save_path)
 
         self._wire_events()
 
@@ -268,13 +245,7 @@ class TriageWidget:
                 widgets.HBox(
                     [
                         self.select,
-                        widgets.VBox(
-                            [
-                                widgets.HBox(
-                                    [self.btn_prev, self.btn_next, self.btn_save]
-                                )
-                            ]
-                        ),
+                        widgets.VBox([widgets.HBox([self.btn_prev, self.btn_next, self.btn_save])]),
                     ]
                 ),
                 widgets.HBox(
@@ -284,9 +255,7 @@ class TriageWidget:
                         widgets.VBox(
                             [
                                 widgets.HTML("<b>Labels</b>"),
-                                widgets.HBox(
-                                    [self.label_ok, self.label_anom, self.label_skip]
-                                ),
+                                widgets.HBox([self.label_ok, self.label_anom, self.label_skip]),
                                 widgets.HTML("<b>Metadata</b>"),
                                 self.meta,
                             ],
