@@ -15,19 +15,6 @@ class EnsembleModel:
     classes_: List[str]
     pipelines: List[Pipeline]
 
-    def predict_proba_mc(self, X: np.ndarray) -> np.ndarray:
-        probs = []
-        for p in self.pipelines:
-            probs.append(p.predict_proba(X))
-        return np.stack(probs, axis=0)
-
-    def predict_proba(self, X: np.ndarray) -> np.ndarray:
-        return self.predict_proba_mc(X).mean(axis=0)
-
-    @property
-    def model_version(self) -> str:
-        return f"ensemble_logreg_calib_v2|m={len(self.pipelines)}"
-
 
 def train_ensemble(
     X: np.ndarray,
@@ -42,24 +29,24 @@ def train_ensemble(
     all_labels = np.unique(y)
 
     # Precompute at least one example index per class (for bootstrap completion)
-    per_class_idx = {}
+    per_class_idx: dict[int, int] = {}
     for lab in all_labels:
         per_class_idx[int(lab)] = int(np.where(y == lab)[0][0])
 
-    for m in range(n_models):
+    for _m in range(n_models):
         idx = rng.integers(0, n, size=n)
 
         # Ensure every observed class appears at least once in the bootstrap sample
         present = set(int(v) for v in np.unique(y[idx]))
         missing = [lab for lab in all_labels if int(lab) not in present]
         if missing:
-            idx = np.concatenate(
-                [idx, np.array([per_class_idx[int(lab)] for lab in missing], dtype=int)]
-            )
+            idx = np.concatenate([idx, np.array([per_class_idx[int(lab)] for lab in missing], dtype=int)])
 
         Xm, ym = X[idx], y[idx]
 
-        base = LogisticRegression(max_iter=2000, multi_class="auto")
+        # scikit-learn 1.8 removed LogisticRegression(multi_class=...).
+        # Omitting it keeps behavior consistent across 1.7.x and 1.8+ (default is "auto"-like behavior).
+        base = LogisticRegression(max_iter=2000, solver="lbfgs")
 
         unique, counts = np.unique(ym, return_counts=True)
         min_count = int(counts.min()) if len(counts) else 0
@@ -80,14 +67,16 @@ def train_ensemble(
 def expected_calibration_error(probs: np.ndarray, y_true: np.ndarray, n_bins: int = 15) -> float:
     conf = probs.max(axis=1)
     pred = probs.argmax(axis=1)
-    acc = (pred == y_true).astype(float)
 
     bins = np.linspace(0.0, 1.0, n_bins + 1)
     ece = 0.0
+
     for i in range(n_bins):
-        lo, hi = bins[i], bins[i + 1]
-        mask = (conf >= lo) & (conf < hi) if i < n_bins - 1 else (conf >= lo) & (conf <= hi)
+        mask = (conf >= bins[i]) & (conf < bins[i + 1])
         if not np.any(mask):
             continue
-        ece += np.abs(acc[mask].mean() - conf[mask].mean()) * (mask.mean())
+        acc = float(np.mean(pred[mask] == y_true[mask]))
+        avg_conf = float(np.mean(conf[mask]))
+        ece += float(np.mean(mask)) * abs(acc - avg_conf)
+
     return float(ece)
