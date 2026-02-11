@@ -15,6 +15,24 @@ class EnsembleModel:
     classes_: List[str]
     pipelines: List[Pipeline]
 
+    def predict_proba_mc(self, X: np.ndarray) -> np.ndarray:
+        """Return per-model probabilities.
+
+        Shape: (n_models, n_samples, n_classes_fit)
+        """
+        probs: List[np.ndarray] = []
+        for p in self.pipelines:
+            probs.append(p.predict_proba(X))
+        return np.stack(probs, axis=0)
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        """Return mean probabilities across the ensemble."""
+        return self.predict_proba_mc(X).mean(axis=0)
+
+    @property
+    def model_version(self) -> str:
+        return f"ensemble_logreg_calib_v2|m={len(self.pipelines)}"
+
 
 def train_ensemble(
     X: np.ndarray,
@@ -25,7 +43,7 @@ def train_ensemble(
 ) -> EnsembleModel:
     rng = np.random.default_rng(seed)
     pipes: List[Pipeline] = []
-    n = X.shape[0]
+    n = int(X.shape[0])
     all_labels = np.unique(y)
 
     # Precompute at least one example index per class (for bootstrap completion)
@@ -66,7 +84,11 @@ def train_ensemble(
     return EnsembleModel(classes_=classes, pipelines=pipes)
 
 
-def expected_calibration_error(probs: np.ndarray, y_true: np.ndarray, n_bins: int = 15) -> float:
+def expected_calibration_error(
+    probs: np.ndarray,
+    y_true: np.ndarray,
+    n_bins: int = 15,
+) -> float:
     conf = probs.max(axis=1)
     pred = probs.argmax(axis=1)
 
