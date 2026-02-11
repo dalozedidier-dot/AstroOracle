@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import List, Tuple
-
-import os
 import hashlib
+import os
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -26,52 +25,34 @@ def load_candidates(cfg: OracleConfig) -> pd.DataFrame:
 
 
 def select_candidates(df: pd.DataFrame, cfg: OracleConfig) -> pd.DataFrame:
-    """Select a query batch for annotation.
+    """Rank and select a query batch.
 
-    The returned DataFrame keeps the caller-provided columns first (same order),
-    and appends a small set of useful ranking diagnostics (e.g. `rank_score`) when
-    available.
+    The output includes the ranking columns produced by :func:`astrooracle.ranking.rank_candidates`
+    (notably ``rank_score``) alongside the original candidate fields.
     """
+
     model = load_model(cfg.model_path)
     ranked, _ = rank_candidates(df, cfg, model=model)
     selected = select_batch(ranked, cfg, k=cfg.n_query)
-
-    base_cols = [c for c in df.columns if c in selected.columns]
-
-    extra_cols = [
-        c
-        for c in (
-            "rank_score",
-            "score_anomaly",
-            "score_acq",
-            "score_prior",
-            "score_div_proxy",
-            "p_max",
-            "y_hat",
-        )
-        if c in selected.columns and c not in base_cols
-    ]
-
-    return selected.loc[:, base_cols + extra_cols].reset_index(drop=True)
+    return selected.reset_index(drop=True)
 
 
 def _synthetic_cutouts(
-    ra_deg: float,
-    dec_deg: float,
-    surveys: List[str],
-    pixels: int,
+    ra_deg: float, dec_deg: float, cfg: OracleConfig
 ) -> List[Tuple[str, np.ndarray]]:
-    """Deterministic synthetic cutouts used for offline mode (and as a fallback).
+    """Deterministic synthetic cutouts.
 
-    This keeps demos and CI stable even when optional astro dependencies are absent.
+    Used for offline mode and as a graceful fallback when optional astro
+    dependencies (astropy/astroquery) are not installed.
     """
+
     results: List[Tuple[str, np.ndarray]] = []
-    for survey in surveys:
+    for survey in cfg.surveys:
         key = f"{ra_deg:.6f}|{dec_deg:.6f}|{survey}"
         seed = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
         rng = np.random.default_rng(seed)
 
-        n = int(pixels)
+        n = int(cfg.pixels)
         yy, xx = np.mgrid[0:n, 0:n]
         cx = rng.uniform(0.35 * n, 0.65 * n)
         cy = rng.uniform(0.35 * n, 0.65 * n)
@@ -87,27 +68,27 @@ def _synthetic_cutouts(
 
 
 def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tuple[str, np.ndarray]]:
-    offline = bool(getattr(cfg, "offline", False)) or os.environ.get("ASTROORACLE_OFFLINE", "") in {
+    offline = bool(getattr(cfg, "offline", False)) or os.environ.get(
+        "ASTROORACLE_OFFLINE", ""
+    ).lower() in {
         "1",
         "true",
         "yes",
     }
 
     if offline:
-        return _synthetic_cutouts(ra_deg=ra_deg, dec_deg=dec_deg, surveys=list(cfg.surveys), pixels=int(cfg.pixels))
+        return _synthetic_cutouts(ra_deg=ra_deg, dec_deg=dec_deg, cfg=cfg)
 
     try:
         from astropy import units as u  # type: ignore
         from astropy.coordinates import SkyCoord  # type: ignore
         from astroquery.skyview import SkyView  # type: ignore
     except ModuleNotFoundError:
-        # Graceful fallback: keep batch-html usable without optional deps.
-        # For real surveys, install extras: pip install -e ".[astro]"
-        return _synthetic_cutouts(ra_deg=ra_deg, dec_deg=dec_deg, surveys=list(cfg.surveys), pixels=int(cfg.pixels))
+        return _synthetic_cutouts(ra_deg=ra_deg, dec_deg=dec_deg, cfg=cfg)
 
     results: List[Tuple[str, np.ndarray]] = []
-
     coord = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg)
+
     for survey in cfg.surveys:
         try:
             images = SkyView.get_images(
@@ -124,27 +105,5 @@ def fetch_cutouts(ra_deg: float, dec_deg: float, cfg: OracleConfig) -> List[Tupl
             results.append((survey, data))
         except Exception:
             continue
-    return results
 
-    from astropy import units as u
-    from astropy.coordinates import SkyCoord
-    from astroquery.skyview import SkyView
-
-    coord = SkyCoord(ra=ra_deg * u.deg, dec=dec_deg * u.deg)
-    for survey in cfg.surveys:
-        try:
-            images = SkyView.get_images(
-                position=coord,
-                survey=[survey],
-                pixels=cfg.pixels,
-                radius=cfg.cutout_radius_arcmin * u.arcmin,
-            )
-            if not images:
-                continue
-            data = images[0][0].data
-            if data is None:
-                continue
-            results.append((survey, data))
-        except Exception:
-            continue
     return results
