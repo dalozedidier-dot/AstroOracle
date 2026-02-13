@@ -58,7 +58,7 @@ jobs:
           astrooracle viz3d             --input candidates.parquet             --output batch_out/viz3d_globe.html             --mode globe             --max-points 5000             --cdn
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: astrooracle_batch_out
           path: batch_out
