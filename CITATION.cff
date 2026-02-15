@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use AstroOracle in your work, please cite it."
+title: "AstroOracle: Active learning oracle for astronomical anomaly triage"
+type: software
+authors:
+  - name: "AstroOracle Contributors"
+license: MIT
+repository-code: "https://github.com/dalozedidier-dot/AstroOracle"
+keywords:
+  - astronomy
+  - anomaly-detection
+  - active-learning
+  - triage
+  - skyview
