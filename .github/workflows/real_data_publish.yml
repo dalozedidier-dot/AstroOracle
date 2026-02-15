@@ -1,0 +1,78 @@
+name: Real data batch (publish branch)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branche de publication"
+        required: false
+        default: "real-data-out"
+      n_rows:
+        description: "Nombre de lignes a utiliser depuis le sample"
+        required: false
+        default: "2000"
+      n_query:
+        description: "Nombre de candidats a inclure dans le batch"
+        required: false
+        default: "60"
+  schedule:
+    - cron: "15 3 * * *"  # Daily 03:15 UTC
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      MPLBACKEND: Agg
+      ASTROORACLE_OFFLINE: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install -U pip
+          pip install -e ".[plotly,astro]"
+
+      - name: Build candidates.parquet from real sample
+        run: |
+          python tools/real_data/build_candidates_from_ecsv.py             --input test_data/real/vari_summary_sample.csv.gz             --output candidates_real.parquet             --coords pseudo             --max-rows "${{ inputs.n_rows }}"             --meta-json real_build_meta.json
+
+      - name: Generate batch HTML (real sample)
+        run: |
+          rm -rf batch_out
+          astrooracle batch-html --candidates candidates_real.parquet --out-dir batch_out --n-query "${{ inputs.n_query }}" --offline
+          astrooracle viz3d --input candidates_real.parquet --output batch_out/viz3d_globe.html --mode globe --max-points 5000 --cdn
+          cp -v real_build_meta.json batch_out/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: real_data_batch_out
+          path: batch_out
+
+      - name: Commit batch to branch
+        run: |
+          BRANCH="${{ inputs.branch }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -B "$BRANCH"
+          rm -rf docs/batch_out
+          mkdir -p docs
+          mv batch_out docs/batch_out
+
+          git add docs/batch_out
+          git commit -m "real batch: update docs/batch_out" || echo "Nothing to commit"
+          git push -f origin "$BRANCH"

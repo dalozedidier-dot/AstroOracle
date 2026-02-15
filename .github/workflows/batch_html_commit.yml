@@ -11,6 +11,10 @@ on:
         description: "Branche de publication du batch"
         required: false
         default: "batch-out"
+      offline:
+        description: "Offline cutouts (recommande pour CI)"
+        required: false
+        default: "true"
   schedule:
     - cron: "0 */6 * * *"
 
@@ -20,7 +24,6 @@ permissions:
 jobs:
   build-and-commit:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -28,10 +31,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Setup Python
-        uses: actions/setup-python@v6
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           cache: pip
 
       - name: Install
@@ -51,11 +54,16 @@ jobs:
 
       - name: Generate batch HTML
         run: |
-          astrooracle batch-html             --candidates candidates.parquet             --out-dir batch_out             --n-query "${{ inputs.n_query }}"
+          rm -rf batch_out
+          EXTRA_OFFLINE=""
+          if [ "${{ inputs.offline }}" = "true" ]; then
+            EXTRA_OFFLINE="--offline"
+          fi
+          astrooracle batch-html --candidates candidates.parquet --out-dir batch_out --n-query "${{ inputs.n_query }}" $EXTRA_OFFLINE
 
       - name: Generate Plotly 3D (globe)
         run: |
-          astrooracle viz3d             --input candidates.parquet             --output batch_out/viz3d_globe.html             --mode globe             --max-points 5000             --cdn
+          astrooracle viz3d --input candidates.parquet --output batch_out/viz3d_globe.html --mode globe --max-points 5000 --cdn
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6
