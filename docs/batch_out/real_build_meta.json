@@ -1,0 +1,9 @@
+{
+  "input_path": "test_data/real/vari_summary_sample.csv.gz",
+  "n_in": 2000,
+  "n_out": 2000,
+  "coords_mode": "pseudo",
+  "score_column": "mad_mag_g_fov",
+  "gaia_matched": 0,
+  "gaia_requested": 0
+}

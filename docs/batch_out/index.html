@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AstroOracle batch | Rapport</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <style>
+    body { background: #0b1020; color: #e7ecff; }
+    a { color: #9ec5ff; }
+    .card { background: #111a33; border: 1px solid rgba(255,255,255,0.10); }
+    .muted { color: rgba(231,236,255,0.70); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .table { color: #e7ecff; }
+    .table thead th { color: rgba(231,236,255,0.85); border-color: rgba(255,255,255,0.10); }
+    .table td { border-color: rgba(255,255,255,0.08); }
+    .cutout-img { width: 100%; height: auto; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); }
+    .clickable-row { cursor: pointer; }
+    #plot { min-height: 360px; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-dark" style="background:#0b1020;border-bottom:1px solid rgba(255,255,255,0.08)">
+    <div class="container py-2">
+      <span class="navbar-brand fw-semibold">AstroOracle batch</span>
+      <div class="ms-auto d-flex gap-2">
+        <button class="btn btn-sm btn-outline-light" id="btnExportJson">Export JSON</button>
+        <button class="btn btn-sm btn-outline-light" id="btnExportCsv">Export CSV</button>
+        <button class="btn btn-sm btn-outline-light" id="btnClear">Clear saved labels</button>
+        <a class="btn btn-sm btn-outline-light" id="linkViz3d" href="viz3d_globe.html" target="_blank" rel="noreferrer">Ouvrir la visualisation 3D</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container py-4">
+    <div class="row g-4">
+      <div class="col-lg-7">
+        <div class="card p-3">
+          <div class="d-flex flex-wrap align-items-center justify-content-between">
+            <div>
+              <div class="fw-semibold">Rapport batch</div>
+              <div class="small muted" id="metaLine">Chargement...</div>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-light" id="btnPlot">Recharger plot</button>
+            </div>
+          </div>
+          <div id="plot" class="mt-2"></div>
+          <div class="small muted mt-2">Données: <span class="mono" id="dataPath">candidates.json</span>. Cutouts: <span class="mono" id="cutoutsPath">cutouts/</span>.</div>
+        </div>
+
+        <div class="card p-3 mt-4">
+          <div class="fw-semibold">Candidats</div>
+          <div class="small muted">Cliquez une ligne pour voir les cutouts et annoter.</div>
+          <div class="table-responsive mt-2" style="max-height: 520px;">
+            <table class="table table-sm table-hover align-middle mb-0" id="candTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th class="text-end">Score</th>
+                  <th class="text-end">RA</th>
+                  <th class="text-end">Dec</th>
+                  <th>Label</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-5">
+        <div class="card p-3">
+          <div class="fw-semibold">Détails</div>
+          <div class="small muted">Le stockage se fait en local (localStorage). Exportez ensuite en CSV ou JSON.</div>
+          <div class="mt-2" id="selectedMeta"></div>
+
+          <div class="mt-3">
+            <label class="form-label small muted">Commentaire</label>
+            <textarea id="commentBox" class="form-control form-control-sm" rows="3" placeholder="Optionnel"></textarea>
+          </div>
+
+          <div class="row g-2 mt-3" id="cutouts"></div>
+
+          <div class="mt-3 small muted" id="noteLine">
+            Note: la page viz3d_globe.html peut dépendre de Plotly via CDN selon le mode d'export.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="container pt-4">
+      <div class="muted small">
+        Astuce: vous pouvez passer un autre dossier via <span class="mono">?base=mon_dossier</span> (il doit contenir <span class="mono">candidates.json</span> et un dossier <span class="mono">cutouts/</span>).
+      </div>
+    </footer>
+  </main>
+
+<script>
+  const LABELS = [
+    '',
+    'real_anomaly',
+    'artefact',
+    'known',
+    'new_type',
+    'unsure',
+  ];
+
+  function slug(s) {
+    return String(s ?? '').replace(/[^a-zA-Z0-9_-]+/g, '_');
+  }
+
+  function storageKey(base) {
+    return `astrooracle_labels::${base}`;
+  }
+
+  function loadSaved(base) {
+    try {
+      const raw = localStorage.getItem(storageKey(base));
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveSaved(base, obj) {
+    localStorage.setItem(storageKey(base), JSON.stringify(obj || {}));
+  }
+
+  function downloadText(filename, text, mime='text/plain') {
+    const blob = new Blob([text], {type: mime});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  function fmt(x, n=5) {
+    const v = Number(x);
+    if (!Number.isFinite(v)) return '';
+    return v.toFixed(n);
+  }
+
+  function guessCutoutPath(baseCutoutsDir, rec, survey) {
+    // Compatible with older candidates.json that only has surveys.
+    const cid = slug(rec.id);
+    const s = slug(survey);
+    return `${baseCutoutsDir}${cid}_${s}.png`;
+  }
+
+  async function fetchJson(path) {
+    const r = await fetch(path, {cache: 'no-store'});
+    if (!r.ok) throw new Error(`fetch failed: ${r.status}`);
+    return await r.json();
+  }
+
+  function renderPlot(recs) {
+    const xs = recs.map(r => Number(r.ra));
+    const ys = recs.map(r => Number(r.dec));
+    const zs = recs.map(r => Number(r.score ?? r.anomaly_score));
+    const ids = recs.map(r => String(r.id));
+    const trace = {
+      type: 'scatter3d',
+      mode: 'markers',
+      x: xs,
+      y: ys,
+      z: zs,
+      text: ids,
+      customdata: recs.map(r => [String(r.id), Number(r.ra), Number(r.dec), Number(r.score ?? r.anomaly_score)]),
+      hovertemplate: 'ID: %{customdata[0]}<br>RA: %{customdata[1]:.5f}<br>Dec: %{customdata[2]:.5f}<br>Score: %{customdata[3]:.4f}<extra></extra>',
+      marker: {size: 3},
+    };
+    const layout = {
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      font: {color: '#e7ecff'},
+      margin: {l: 0, r: 0, t: 10, b: 0},
+      scene: {
+        xaxis: {title: 'RA (deg)'},
+        yaxis: {title: 'Dec (deg)'},
+        zaxis: {title: 'Score'},
+      },
+    };
+    Plotly.newPlot('plot', [trace], layout, {displayModeBar: true, responsive: true});
+
+    const plotDiv = document.getElementById('plot');
+    plotDiv.on('plotly_click', (ev) => {
+      const p = ev.points && ev.points[0];
+      if (!p || !p.customdata) return;
+      const cid = String(p.customdata[0]);
+      const rec = recs.find(r => String(r.id) === cid);
+      if (rec) select(rec);
+    });
+  }
+
+  let BASE = '';
+  let DATA_PATH = 'candidates.json';
+  let CUTOUTS_DIR = 'cutouts/';
+  let RECS = [];
+  let SAVED = {};
+  let SELECTED_ID = null;
+
+  function select(rec) {
+    SELECTED_ID = String(rec.id);
+
+    document.querySelectorAll('#candTable tbody tr').forEach((tr) => {
+      tr.classList.toggle('table-active', tr.getAttribute('data-id') === SELECTED_ID);
+    });
+
+    const meta = document.getElementById('selectedMeta');
+    meta.innerHTML = `
+      <div class="small">
+        <div>ID: <span class="mono">${rec.id}</span></div>
+        <div>Score: <span class="mono">${fmt(rec.score ?? rec.anomaly_score, 4)}</span></div>
+        <div>RA: <span class="mono">${fmt(rec.ra, 5)}</span> Dec: <span class="mono">${fmt(rec.dec, 5)}</span></div>
+      </div>
+    `;
+
+    const commentBox = document.getElementById('commentBox');
+    commentBox.value = (SAVED[SELECTED_ID] && SAVED[SELECTED_ID].comment) ? SAVED[SELECTED_ID].comment : '';
+    commentBox.oninput = () => {
+      SAVED[SELECTED_ID] = SAVED[SELECTED_ID] || {label: ''};
+      SAVED[SELECTED_ID].comment = commentBox.value;
+      saveSaved(BASE, SAVED);
+    };
+
+    const box = document.getElementById('cutouts');
+    box.innerHTML = '';
+
+    const cutMap = rec.cutouts || null;
+    const surveys = rec.surveys || (cutMap ? Object.keys(cutMap) : []);
+
+    if (!surveys || surveys.length === 0) {
+      box.innerHTML = '<div class="muted small">Aucun cutout listé.</div>';
+      return;
+    }
+
+    for (const s of surveys) {
+      const col = document.createElement('div');
+      col.className = 'col-6';
+      const src = cutMap && cutMap[s] ? (BASE ? `${BASE}/${cutMap[s]}` : cutMap[s]) : (BASE ? `${BASE}/${guessCutoutPath(CUTOUTS_DIR, rec, s)}` : guessCutoutPath(CUTOUTS_DIR, rec, s));
+      col.innerHTML = `
+        <div class="small muted mb-1">${s}</div>
+        <img class="cutout-img" src="${src}" alt="${s}" onerror="this.style.opacity=0.35;" />
+      `;
+      box.appendChild(col);
+    }
+  }
+
+  function renderTable() {
+    const tbody = document.querySelector('#candTable tbody');
+    tbody.innerHTML = '';
+
+    for (const rec of RECS) {
+      const id = String(rec.id);
+      const tr = document.createElement('tr');
+      tr.className = 'clickable-row';
+      tr.setAttribute('data-id', id);
+
+      const saved = SAVED[id] || {};
+      const label = saved.label || '';
+
+      tr.innerHTML = `
+        <td class="mono">${id}</td>
+        <td class="text-end mono">${fmt(rec.score ?? rec.anomaly_score, 4)}</td>
+        <td class="text-end mono">${fmt(rec.ra, 5)}</td>
+        <td class="text-end mono">${fmt(rec.dec, 5)}</td>
+        <td>
+          <select class="form-select form-select-sm" data-id="${id}">
+            ${LABELS.map(v => `<option value="${v}" ${v===label ? 'selected' : ''}>${v || '(none)'}</option>`).join('')}
+          </select>
+        </td>
+      `;
+
+      tr.addEventListener('click', (ev) => {
+        // Avoid selecting when clicking the select itself.
+        if (ev.target && ev.target.tagName && ev.target.tagName.toLowerCase() === 'select') return;
+        select(rec);
+      });
+
+      tbody.appendChild(tr);
+    }
+
+    document.querySelectorAll('#candTable select').forEach((sel) => {
+      sel.addEventListener('change', () => {
+        const id = String(sel.getAttribute('data-id'));
+        SAVED[id] = SAVED[id] || {comment: ''};
+        SAVED[id].label = sel.value;
+        saveSaved(BASE, SAVED);
+      });
+    });
+
+    if (RECS.length > 0) select(RECS[0]);
+  }
+
+  function exportJson() {
+    const out = [];
+    for (const rec of RECS) {
+      const id = String(rec.id);
+      const s = SAVED[id] || {};
+      if (!s.label && !s.comment) continue;
+      out.push({
+        id: id,
+        ra: Number(rec.ra),
+        dec: Number(rec.dec),
+        anomaly_score: Number(rec.score ?? rec.anomaly_score),
+        label: s.label || '',
+        comment: s.comment || '',
+      });
+    }
+    downloadText('annotations.json', JSON.stringify(out, null, 2), 'application/json');
+  }
+
+  function exportCsv() {
+    const rows = ['id,ra,dec,anomaly_score,label,comment'];
+    for (const rec of RECS) {
+      const id = String(rec.id);
+      const s = SAVED[id] || {};
+      if (!s.label && !s.comment) continue;
+      const comment = String(s.comment || '').replace(/"/g, '""');
+      rows.push(`${id},${Number(rec.ra)},${Number(rec.dec)},${Number(rec.score ?? rec.anomaly_score)},${s.label || ''},"${comment}"`);
+    }
+    downloadText('annotations.csv', rows.join('\n'), 'text/csv');
+  }
+
+  function clearSaved() {
+    SAVED = {};
+    saveSaved(BASE, SAVED);
+    renderTable();
+  }
+
+  async function init() {
+    const params = new URLSearchParams(window.location.search);
+    BASE = (params.get('base') || '').trim();
+
+    DATA_PATH = BASE ? `${BASE}/candidates.json` : 'candidates.json';
+    CUTOUTS_DIR = BASE ? `${BASE}/cutouts/` : 'cutouts/';
+
+    document.getElementById('dataPath').textContent = DATA_PATH;
+    document.getElementById('cutoutsPath').textContent = CUTOUTS_DIR;
+
+    SAVED = loadSaved(BASE);
+
+    // Hide viz3d link if file does not exist.
+    try {
+      const rr = await fetch(BASE ? `${BASE}/viz3d_globe.html` : 'viz3d_globe.html', {method: 'HEAD'});
+      if (!rr.ok) document.getElementById('linkViz3d').style.display = 'none';
+      else document.getElementById('linkViz3d').href = BASE ? `${BASE}/viz3d_globe.html` : 'viz3d_globe.html';
+    } catch {
+      document.getElementById('linkViz3d').style.display = 'none';
+    }
+
+    RECS = await fetchJson(DATA_PATH);
+    // Sort by score desc
+    RECS.sort((a,b) => Number(b.score ?? b.anomaly_score) - Number(a.score ?? a.anomaly_score));
+
+    document.getElementById('metaLine').textContent = `${RECS.length} candidats. Labels sauvegardés: ${Object.keys(SAVED).length}.`;
+
+    renderPlot(RECS);
+    renderTable();
+  }
+
+  document.getElementById('btnExportJson').addEventListener('click', exportJson);
+  document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
+  document.getElementById('btnClear').addEventListener('click', clearSaved);
+  document.getElementById('btnPlot').addEventListener('click', () => renderPlot(RECS));
+
+  init().catch((e) => {
+    console.error(e);
+    document.getElementById('metaLine').textContent = `Erreur de chargement. Vérifiez candidates.json et cutouts/.`;
+  });
+</script>
+</body>
+</html>

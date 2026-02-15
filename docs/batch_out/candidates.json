@@ -1,0 +1,842 @@
+[
+  {
+    "id": "117516421252410368",
+    "ra": 321.0368,
+    "dec": -44.9653,
+    "score": -0.8493378012430065,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/117516421252410368_DSS2_Red.png",
+      "2MASS J": "cutouts/117516421252410368_2MASS_J.png"
+    }
+  },
+  {
+    "id": "115813041521437440",
+    "ra": 183.744,
+    "dec": -21.0689,
+    "score": 4.059815091910475,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/115813041521437440_DSS2_Red.png",
+      "2MASS J": "cutouts/115813041521437440_2MASS_J.png"
+    }
+  },
+  {
+    "id": "115086225677217280",
+    "ra": 161.728,
+    "dec": -50.3979,
+    "score": 1.2153454271171493,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/115086225677217280_DSS2_Red.png",
+      "2MASS J": "cutouts/115086225677217280_2MASS_J.png"
+    }
+  },
+  {
+    "id": "115710305901515264",
+    "ra": 111.5264,
+    "dec": 5.163899999999998,
+    "score": 0.2905472029717095,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/115710305901515264_DSS2_Red.png",
+      "2MASS J": "cutouts/115710305901515264_2MASS_J.png"
+    }
+  },
+  {
+    "id": "117551674343704704",
+    "ra": 90.4704,
+    "dec": 34.2873,
+    "score": 2.941915643290106,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/117551674343704704_DSS2_Red.png",
+      "2MASS J": "cutouts/117551674343704704_2MASS_J.png"
+    }
+  },
+  {
+    "id": "117695332410186880",
+    "ra": 258.688,
+    "dec": 64.78909999999999,
+    "score": 1.4809121135146048,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/117695332410186880_DSS2_Red.png",
+      "2MASS J": "cutouts/117695332410186880_2MASS_J.png"
+    }
+  },
+  {
+    "id": "112495402621669120",
+    "ra": 166.912,
+    "dec": -17.705,
+    "score": 3.91635152435464,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/112495402621669120_DSS2_Red.png",
+      "2MASS J": "cutouts/112495402621669120_2MASS_J.png"
+    }
+  },
+  {
+    "id": "118319275195179392",
+    "ra": 357.9392,
+    "dec": -63.466899999999995,
+    "score": -0.7782547641169506,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/118319275195179392_DSS2_Red.png",
+      "2MASS J": "cutouts/118319275195179392_2MASS_J.png"
+    }
+  },
+  {
+    "id": "117156606072442752",
+    "ra": 284.2752,
+    "dec": 40.1686,
+    "score": 2.3213693901844987,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/117156606072442752_DSS2_Red.png",
+      "2MASS J": "cutouts/117156606072442752_2MASS_J.png"
+    }
+  },
+  {
+    "id": "114073575467540352",
+    "ra": 194.0352,
+    "dec": 80.4296,
+    "score": 0.8960287672188876,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/114073575467540352_DSS2_Red.png",
+      "2MASS J": "cutouts/114073575467540352_2MASS_J.png"
+    }
+  },
+  {
+    "id": "116176597614591488",
+    "ra": 59.1488,
+    "dec": -2.288499999999999,
+    "score": 1.7619888673525674,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/116176597614591488_DSS2_Red.png",
+      "2MASS J": "cutouts/116176597614591488_2MASS_J.png"
+    }
+  },
+  {
+    "id": "114784581534184576",
+    "ra": 258.4576,
+    "dec": 30.598100000000002,
+    "score": 1.4721014781437325,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/114784581534184576_DSS2_Red.png",
+      "2MASS J": "cutouts/114784581534184576_2MASS_J.png"
+    }
+  },
+  {
+    "id": "118342463723056384",
+    "ra": 265.6384,
+    "dec": 40.65889999999999,
+    "score": 2.1878407338473664,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/118342463723056384_DSS2_Red.png",
+      "2MASS J": "cutouts/118342463723056384_2MASS_J.png"
+    }
+  },
+  {
+    "id": "114735309669043328",
+    "ra": 184.3328,
+    "dec": -78.0648,
+    "score": 0.6081622483288025,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/114735309669043328_DSS2_Red.png",
+      "2MASS J": "cutouts/114735309669043328_2MASS_J.png"
+    }
+  },
+  {
+    "id": "114991770755987584",
+    "ra": 118.7584,
+    "dec": 25.854299999999995,
+    "score": 0.5520842195424829,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/114991770755987584_DSS2_Red.png",
+      "2MASS J": "cutouts/114991770755987584_2MASS_J.png"
+    }
+  },
+  {
+    "id": "117604279103488128",
+    "ra": 188.8128,
+    "dec": 55.53059999999999,
+    "score": -0.8751000071496654,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/117604279103488128_DSS2_Red.png",
+      "2MASS J": "cutouts/117604279103488128_2MASS_J.png"
+    }
+  },
+  {
+    "id": "112468975685961728",
+    "ra": 356.1728,
+    "dec": -31.7866,
+    "score": 0.5532563560231412,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/112468975685961728_DSS2_Red.png",
+      "2MASS J": "cutouts/112468975685961728_2MASS_J.png"
+    }
+  },
+  {
+    "id": "112421116868887808",
+    "ra": 48.7808,
+    "dec": 78.80189999999999,
+    "score": 1.163686054658417,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/112421116868887808_DSS2_Red.png",
+      "2MASS J": "cutouts/112421116868887808_2MASS_J.png"
+    }
+  },
+  {
+    "id": "116543387821740928",
+    "ra": 294.0928,
+    "dec": -73.6717,
+    "score": 0.3339258407305247,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/116543387821740928_DSS2_Red.png",
+      "2MASS J": "cutouts/116543387821740928_2MASS_J.png"
+    }
+  },
+  {
+    "id": "111420797507623296",
+    "ra": 322.3296,
+    "dec": 12.152900000000002,
+    "score": 0.5639564034514065,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/111420797507623296_DSS2_Red.png",
+      "2MASS J": "cutouts/111420797507623296_2MASS_J.png"
+    }
+  },
+  {
+    "id": "117583354022701696",
+    "ra": 30.1696,
+    "dec": 14.278400000000005,
+    "score": 0.48040737512233495,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/117583354022701696_DSS2_Red.png",
+      "2MASS J": "cutouts/117583354022701696_2MASS_J.png"
+    }
+  },
+  {
+    "id": "111327102797691392",
+    "ra": 209.1392,
+    "dec": -70.4779,
+    "score": -0.4851188212484234,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/111327102797691392_DSS2_Red.png",
+      "2MASS J": "cutouts/111327102797691392_2MASS_J.png"
+    }
+  },
+  {
+    "id": "115253871136057344",
+    "ra": 165.7344,
+    "dec": -73.5796,
+    "score": -0.8440997428834834,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/115253871136057344_DSS2_Red.png",
+      "2MASS J": "cutouts/115253871136057344_2MASS_J.png"
+    }
+  },
+  {
+    "id": "114981600273988736",
+    "ra": 158.8736,
+    "dec": -76.6591,
+    "score": 0.5407733151300098,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/114981600273988736_DSS2_Red.png",
+      "2MASS J": "cutouts/114981600273988736_2MASS_J.png"
+    }
+  },
+  {
+    "id": "112089373594382592",
+    "ra": 198.2592,
+    "dec": 43.71090000000001,
+    "score": 2.209725219512622,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/112089373594382592_DSS2_Red.png",
+      "2MASS J": "cutouts/112089373594382592_2MASS_J.png"
+    }
+  },
+  {
+    "id": "111900184576797568",
+    "ra": 239.7568,
+    "dec": 8.460400000000007,
+    "score": -0.8912359210385795,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/111900184576797568_DSS2_Red.png",
+      "2MASS J": "cutouts/111900184576797568_2MASS_J.png"
+    }
+  },
+  {
+    "id": "115085817655762432",
+    "ra": 56.2432,
+    "dec": -61.7318,
+    "score": 1.5688747796722364,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/115085817655762432_DSS2_Red.png",
+      "2MASS J": "cutouts/115085817655762432_2MASS_J.png"
+    }
+  },
+  {
+    "id": "115977624665249024",
+    "ra": 164.9024,
+    "dec": 50.685100000000006,
+    "score": -0.7066367417880308,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/115977624665249024_DSS2_Red.png",
+      "2MASS J": "cutouts/115977624665249024_2MASS_J.png"
+    }
+  },
+  {
+    "id": "116593797855749504",
+    "ra": 14.9504,
+    "dec": 66.6071,
+    "score": -0.7339993813715268,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/116593797855749504_DSS2_Red.png",
+      "2MASS J": "cutouts/116593797855749504_2MASS_J.png"
+    }
+  },
+  {
+    "id": "114304782148566784",
+    "ra": 216.6784,
+    "dec": 22.837400000000002,
+    "score": 1.2564559146209429,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/114304782148566784_DSS2_Red.png",
+      "2MASS J": "cutouts/114304782148566784_2MASS_J.png"
+    }
+  },
+  {
+    "id": "111829437875964544",
+    "ra": 116.4544,
+    "dec": 23.274299999999997,
+    "score": 1.378071314596588,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/111829437875964544_DSS2_Red.png",
+      "2MASS J": "cutouts/111829437875964544_2MASS_J.png"
+    }
+  },
+  {
+    "id": "116889768343887104",
+    "ra": 188.7104,
+    "dec": 8.009500000000003,
+    "score": 0.34447586145103304,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/116889768343887104_DSS2_Red.png",
+      "2MASS J": "cutouts/116889768343887104_2MASS_J.png"
+    }
+  },
+  {
+    "id": "116305755871126016",
+    "ra": 232.6016,
+    "dec": -14.559200000000004,
+    "score": 3.313837266516414,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/116305755871126016_DSS2_Red.png",
+      "2MASS J": "cutouts/116305755871126016_2MASS_J.png"
+    }
+  },
+  {
+    "id": "116030500006768896",
+    "ra": 116.8896,
+    "dec": 79.44460000000001,
+    "score": 4.6315334625347395,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/116030500006768896_DSS2_Red.png",
+      "2MASS J": "cutouts/116030500006768896_2MASS_J.png"
+    }
+  },
+  {
+    "id": "113058898034097408",
+    "ra": 329.7408,
+    "dec": -25.054699999999997,
+    "score": 1.3262769709271793,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/113058898034097408_DSS2_Red.png",
+      "2MASS J": "cutouts/113058898034097408_2MASS_J.png"
+    }
+  },
+  {
+    "id": "118257633823512960",
+    "ra": 271.296,
+    "dec": 24.272800000000004,
+    "score": 0.6135493957291592,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/118257633823512960_DSS2_Red.png",
+      "2MASS J": "cutouts/118257633823512960_2MASS_J.png"
+    }
+  },
+  {
+    "id": "114980844359735680",
+    "ra": 93.568,
+    "dec": 82.3433,
+    "score": 0.4199154443759274,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/114980844359735680_DSS2_Red.png",
+      "2MASS J": "cutouts/114980844359735680_2MASS_J.png"
+    }
+  },
+  {
+    "id": "114194354243985664",
+    "ra": 238.5664,
+    "dec": 15.395600000000002,
+    "score": 2.7444740246592585,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/114194354243985664_DSS2_Red.png",
+      "2MASS J": "cutouts/114194354243985664_2MASS_J.png"
+    }
+  },
+  {
+    "id": "113539384615589760",
+    "ra": 278.976,
+    "dec": 1.794799999999995,
+    "score": 0.3586268929418518,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/113539384615589760_DSS2_Red.png",
+      "2MASS J": "cutouts/113539384615589760_2MASS_J.png"
+    }
+  },
+  {
+    "id": "113768323551869568",
+    "ra": 266.9568,
+    "dec": 61.2097,
+    "score": 2.4472732296445545,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/113768323551869568_DSS2_Red.png",
+      "2MASS J": "cutouts/113768323551869568_2MASS_J.png"
+    }
+  },
+  {
+    "id": "115124811662927360",
+    "ra": 292.736,
+    "dec": -58.565,
+    "score": 2.3445494409933265,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/115124811662927360_DSS2_Red.png",
+      "2MASS J": "cutouts/115124811662927360_2MASS_J.png"
+    }
+  },
+  {
+    "id": "110885885100930560",
+    "ra": 93.056,
+    "dec": -86.525,
+    "score": 2.2739742891753885,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/110885885100930560_DSS2_Red.png",
+      "2MASS J": "cutouts/110885885100930560_2MASS_J.png"
+    }
+  },
+  {
+    "id": "117473338436547840",
+    "ra": 14.784,
+    "dec": 18.289900000000003,
+    "score": 1.1629136020055366,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/117473338436547840_DSS2_Red.png",
+      "2MASS J": "cutouts/117473338436547840_2MASS_J.png"
+    }
+  },
+  {
+    "id": "116508104665762048",
+    "ra": 56.2048,
+    "dec": 26.240700000000004,
+    "score": -0.8168654183961644,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/116508104665762048_DSS2_Red.png",
+      "2MASS J": "cutouts/116508104665762048_2MASS_J.png"
+    }
+  },
+  {
+    "id": "115767721025989248",
+    "ra": 358.9248,
+    "dec": -19.971599999999995,
+    "score": -0.3735988320143146,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/115767721025989248_DSS2_Red.png",
+      "2MASS J": "cutouts/115767721025989248_2MASS_J.png"
+    }
+  },
+  {
+    "id": "116084169918148992",
+    "ra": 14.8992,
+    "dec": -49.7245,
+    "score": 0.5696263828916689,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/116084169918148992_DSS2_Red.png",
+      "2MASS J": "cutouts/116084169918148992_2MASS_J.png"
+    }
+  },
+  {
+    "id": "114015133848638976",
+    "ra": 183.8976,
+    "dec": 77.0513,
+    "score": -0.8718833460512903,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/114015133848638976_DSS2_Red.png",
+      "2MASS J": "cutouts/114015133848638976_2MASS_J.png"
+    }
+  },
+  {
+    "id": "112636037029452416",
+    "ra": 265.2416,
+    "dec": -71.1937,
+    "score": 2.1176394602069464,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/112636037029452416_DSS2_Red.png",
+      "2MASS J": "cutouts/112636037029452416_2MASS_J.png"
+    }
+  },
+  {
+    "id": "115725522969142400",
+    "ra": 194.24,
+    "dec": 67.86019999999999,
+    "score": -0.5148039825619264,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/115725522969142400_DSS2_Red.png",
+      "2MASS J": "cutouts/115725522969142400_2MASS_J.png"
+    }
+  },
+  {
+    "id": "112064355406907776",
+    "ra": 10.7776,
+    "dec": 68.7613,
+    "score": 1.2015878723632072,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/112064355406907776_DSS2_Red.png",
+      "2MASS J": "cutouts/112064355406907776_2MASS_J.png"
+    }
+  },
+  {
+    "id": "116468208713708160",
+    "ra": 90.816,
+    "dec": -1.9801999999999964,
+    "score": 0.42181877616483243,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/116468208713708160_DSS2_Red.png",
+      "2MASS J": "cutouts/116468208713708160_2MASS_J.png"
+    }
+  },
+  {
+    "id": "112373386894211200",
+    "ra": 301.12,
+    "dec": 12.9692,
+    "score": 0.818611816437862,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/112373386894211200_DSS2_Red.png",
+      "2MASS J": "cutouts/112373386894211200_2MASS_J.png"
+    }
+  },
+  {
+    "id": "115612792964056576",
+    "ra": 85.6576,
+    "dec": -3.528800000000004,
+    "score": 0.8911981977737874,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/115612792964056576_DSS2_Red.png",
+      "2MASS J": "cutouts/115612792964056576_2MASS_J.png"
+    }
+  },
+  {
+    "id": "112712276993250304",
+    "ra": 165.0304,
+    "dec": 66.5831,
+    "score": 2.7599226815195657,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/112712276993250304_DSS2_Red.png",
+      "2MASS J": "cutouts/112712276993250304_2MASS_J.png"
+    }
+  },
+  {
+    "id": "110850872527294976",
+    "ra": 129.4976,
+    "dec": 20.903499999999994,
+    "score": 0.32720813075917027,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/110850872527294976_DSS2_Red.png",
+      "2MASS J": "cutouts/110850872527294976_2MASS_J.png"
+    }
+  },
+  {
+    "id": "112316216587766016",
+    "ra": 56.6016,
+    "dec": 44.90520000000001,
+    "score": 2.984502097770919,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/112316216587766016_DSS2_Red.png",
+      "2MASS J": "cutouts/112316216587766016_2MASS_J.png"
+    }
+  },
+  {
+    "id": "112967260612110464",
+    "ra": 171.0464,
+    "dec": -50.5386,
+    "score": 3.222273827306848,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/112967260612110464_DSS2_Red.png",
+      "2MASS J": "cutouts/112967260612110464_2MASS_J.png"
+    }
+  },
+  {
+    "id": "118187879259827328",
+    "ra": 22.7328,
+    "dec": 66.64609999999999,
+    "score": 3.049286165843125,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/118187879259827328_DSS2_Red.png",
+      "2MASS J": "cutouts/118187879259827328_2MASS_J.png"
+    }
+  },
+  {
+    "id": "112103701603473792",
+    "ra": 27.3792,
+    "dec": 81.71119999999999,
+    "score": 1.6312570997626896,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/112103701603473792_DSS2_Red.png",
+      "2MASS J": "cutouts/112103701603473792_2MASS_J.png"
+    }
+  },
+  {
+    "id": "115283283071979136",
+    "ra": 237.9136,
+    "dec": 23.418599999999998,
+    "score": 2.442103251186307,
+    "surveys": [
+      "DSS2 Red",
+      "2MASS J"
+    ],
+    "cutouts": {
+      "DSS2 Red": "cutouts/115283283071979136_DSS2_Red.png",
+      "2MASS J": "cutouts/115283283071979136_2MASS_J.png"
+    }
+  }
+]
