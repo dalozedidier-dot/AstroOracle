@@ -3,156 +3,146 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AstroOracle . Dashboard</title>
+  <title>AstroOracle | Dashboard annotations</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
   <style>
-    body { background: #0b1020; color: #e9edf5; }
-    .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
-    .muted { color: rgba(233,237,245,0.72); }
+    body { background: #0b1020; color: #e7ecff; }
+    a { color: #9ec5ff; }
+    .card { background: #111a33; border: 1px solid rgba(255,255,255,0.10); }
+    .muted { color: rgba(231,236,255,0.70); }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    a { color: #a7c7ff; }
-    .badge-soft { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); }
-    table { color: inherit; }
+    .table { color: #e7ecff; }
+    .table thead th { color: rgba(231,236,255,0.85); border-color: rgba(255,255,255,0.10); }
+    .table td { border-color: rgba(255,255,255,0.08); }
+    #bar { min-height: 320px; }
   </style>
 </head>
 <body>
-
-<nav class="navbar navbar-dark" style="background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.08);">
-  <div class="container">
-    <a class="navbar-brand" href="/">AstroOracle</a>
-    <div class="d-flex gap-2">
-      <a class="btn btn-sm btn-outline-light" href="/">Landing</a>
-      <a class="btn btn-sm btn-outline-light" href="/api/export?format=csv">Export CSV</a>
-      <a class="btn btn-sm btn-outline-light" href="/api/export?format=json">Export JSON</a>
+  <nav class="navbar navbar-dark" style="background:#0b1020;border-bottom:1px solid rgba(255,255,255,0.08)">
+    <div class="container py-2">
+      <a class="navbar-brand fw-semibold" href="/">AstroOracle</a>
+      <div class="ms-auto d-flex gap-2">
+        <a class="btn btn-sm btn-outline-light" href="/">Landing</a>
+        <a class="btn btn-sm btn-outline-light" href="/api/export?format=csv">Export CSV</a>
+        <a class="btn btn-sm btn-outline-light" href="/api/export?format=json">Export JSON</a>
+      </div>
     </div>
-  </div>
-</nav>
+  </nav>
 
-<main class="py-4">
-  <div class="container">
-
+  <main class="container py-4">
     <div class="row g-4">
-      <div class="col-lg-6">
+      <div class="col-lg-5">
         <div class="card p-3">
-          <h1 class="h5 mb-2">Dashboard annotations</h1>
-          <div class="muted">Résumé rapide. Les exports sortent depuis l'endpoint API.</div>
-          <div class="mt-3">
-            <div class="muted" style="font-size:0.9rem;">Fichiers</div>
-            <div class="mono" style="font-size:0.9rem;">candidates: {{ paths.candidates }}</div>
-            <div class="mono" style="font-size:0.9rem;">annotations: {{ paths.annotations }}</div>
+          <div class="fw-semibold">Fichiers</div>
+          <div class="mt-2 small">
+            <div class="muted">candidates</div>
+            <div class="mono">{{ paths.candidates }}</div>
+            <div class="muted mt-2">annotations</div>
+            <div class="mono">{{ paths.annotations }}</div>
           </div>
-
-          <hr class="border-light" style="opacity: 0.15;" />
-
-          <div class="d-flex flex-wrap gap-2">
-            {% for label, cnt in annotation_counts.items() %}
-              <span class="badge badge-soft rounded-pill">
-                <span class="mono">{{ label }}</span>
-                <span class="mono">{{ cnt }}</span>
-              </span>
-            {% endfor %}
-            {% if annotation_counts|length == 0 %}
-              <span class="muted">Aucune annotation pour le moment.</span>
-            {% endif %}
-          </div>
-
-          <div class="mt-3 d-flex gap-2 flex-wrap">
-            <button class="btn btn-sm btn-outline-light" id="refresh">Refresh</button>
-            <button class="btn btn-sm btn-outline-light" id="toggleHeatmap">Heatmap</button>
-          </div>
-
-          <div id="heatmap" class="mt-3" style="display:none;">
-            <div class="muted">Heatmap (comptage labels). Version lightweight.</div>
-            <div id="heatmapTable"></div>
-          </div>
-
+          <div class="mt-3 small muted">Résumé rapide. Les exports sortent depuis l'endpoint API.</div>
         </div>
       </div>
 
-      <div class="col-lg-6">
+      <div class="col-lg-7">
         <div class="card p-3">
-          <h2 class="h6 mb-2">Dernières annotations (preview)</h2>
-          <div class="muted" style="font-size:0.9rem;">Limite côté serveur. Utilisez l'export pour la totalité.</div>
-          <div class="table-responsive mt-2" style="max-height: 520px; overflow:auto;">
-            <table class="table table-sm table-dark align-middle" style="--bs-table-bg: transparent; --bs-table-striped-bg: rgba(255,255,255,0.03);">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="fw-semibold">Répartition des labels</div>
+            <button class="btn btn-sm btn-outline-light" id="btnRefresh">Refresh</button>
+          </div>
+          <div id="bar" class="mt-2"></div>
+          <div class="small muted">Heatmap version lightweight. Pour la totalité: export CSV ou JSON.</div>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="card p-3">
+          <div class="fw-semibold">Dernières annotations (preview)</div>
+          <div class="muted small">Limite côté serveur. Utilisez l'export pour la totalité.</div>
+          <div class="table-responsive mt-2" style="max-height: 420px;">
+            <table class="table table-sm table-hover align-middle mb-0" id="annTable">
               <thead>
                 <tr>
-                  <th>id</th>
-                  <th>label</th>
-                  <th>score</th>
-                  <th>comment</th>
+                  <th>ID</th>
+                  <th>Label</th>
+                  <th class="text-end">Score</th>
+                  <th>Comment</th>
                 </tr>
               </thead>
-              <tbody id="rows">
+              <tbody>
                 {% for r in annotations_preview %}
-                  <tr>
-                    <td class="mono">{{ r.get('id','') }}</td>
-                    <td class="mono">{{ r.get('label','') }}</td>
-                    <td class="mono">{{ '%.3f'|format(r.get('anomaly_score',0.0) or 0.0) }}</td>
-                    <td>{{ r.get('comment','') }}</td>
-                  </tr>
+                <tr>
+                  <td class="mono">{{ r.get('id','') }}</td>
+                  <td class="mono">{{ r.get('label','') }}</td>
+                  <td class="text-end mono">{{ '%.3f'|format(r.get('anomaly_score',0.0) or 0.0) }}</td>
+                  <td>{{ r.get('comment','') }}</td>
+                </tr>
                 {% endfor %}
+                {% if annotations_preview|length == 0 %}
+                <tr><td colspan="4" class="muted">Aucune annotation pour le moment.</td></tr>
+                {% endif %}
               </tbody>
             </table>
           </div>
         </div>
       </div>
-
     </div>
-
-  </div>
-</main>
+  </main>
 
 <script>
-function buildHeatmap(counts){
-  const entries = Object.entries(counts || {});
-  if(entries.length === 0){
-    document.getElementById('heatmapTable').innerHTML = '<div class="muted">Aucune donnée.</div>';
-    return;
+  function renderBar(counts) {
+    const labels = Object.keys(counts || {});
+    const values = labels.map((k) => counts[k]);
+    const data = [{type: 'bar', x: labels, y: values}];
+    const layout = {
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      font: {color: '#e7ecff'},
+      margin: {l: 40, r: 20, t: 10, b: 40},
+      xaxis: {tickangle: -25},
+      yaxis: {title: 'count'},
+    };
+    Plotly.newPlot('bar', data, layout, {displayModeBar: false, responsive: true});
   }
 
-  let html = '<table class="table table-sm table-dark" style="--bs-table-bg: transparent;">';
-  html += '<thead><tr><th>label</th><th>count</th></tr></thead><tbody>';
-  for(const [k,v] of entries){
-    html += `<tr><td class="mono">${k}</td><td class="mono">${v}</td></tr>`;
+  async function refresh() {
+    const r = await fetch('/api/annotations?limit=5000');
+    const j = await r.json();
+    const rows = j.rows || [];
+
+    const counts = {};
+    for (const row of rows) {
+      const k = String(row.label || '');
+      if (!k) continue;
+      counts[k] = (counts[k] || 0) + 1;
+    }
+    renderBar(counts);
+
+    const tbody = document.querySelector('#annTable tbody');
+    tbody.innerHTML = '';
+    for (const row of rows.slice(-200).reverse()) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="mono">${row.id || ''}</td>
+        <td class="mono">${row.label || ''}</td>
+        <td class="text-end mono">${Number(row.anomaly_score || 0).toFixed(3)}</td>
+        <td>${row.comment || ''}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+    if (rows.length === 0) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td colspan="4" class="muted">Aucune annotation pour le moment.</td>';
+      tbody.appendChild(tr);
+    }
   }
-  html += '</tbody></table>';
-  document.getElementById('heatmapTable').innerHTML = html;
-}
 
-async function refresh(){
-  const r = await fetch('/api/annotations?limit=100');
-  const data = await r.json();
-  const tbody = document.getElementById('rows');
-  tbody.innerHTML = '';
-  for(const row of data.rows){
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="mono">${row.id || ''}</td>
-      <td class="mono">${row.label || ''}</td>
-      <td class="mono">${Number(row.anomaly_score || 0).toFixed(3)}</td>
-      <td>${row.comment || ''}</td>
-    `;
-    tbody.appendChild(tr);
-  }
+  document.getElementById('btnRefresh').addEventListener('click', refresh);
 
-  // Counts
-  const counts = {};
-  for(const row of data.rows){
-    if(!row.label) continue;
-    counts[row.label] = (counts[row.label] || 0) + 1;
-  }
-  buildHeatmap(counts);
-}
-
-const hm = document.getElementById('heatmap');
-document.getElementById('toggleHeatmap').addEventListener('click', () => {
-  hm.style.display = (hm.style.display === 'none') ? 'block' : 'none';
-});
-
-document.getElementById('refresh').addEventListener('click', refresh);
+  // Initial render from server-side counts
+  const initCounts = {{ annotation_counts | tojson }};
+  renderBar(initCounts);
 </script>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
