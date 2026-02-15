@@ -38,7 +38,7 @@ jobs:
           astrooracle viz3d --input candidates.parquet --output demo_out/viz3d_globe.html --mode globe --max-points 5000 --cdn
 
       - name: Upload demo artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: demo_out
           path: demo_out
