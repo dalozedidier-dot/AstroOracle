@@ -1,8 +1,8 @@
-name: ci
+name: CI
+
 on:
   push:
   pull_request:
-  workflow_dispatch:
 
 jobs:
   test:
@@ -11,20 +11,26 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
+
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
+
       - name: Install
         run: |
-          python -m pip install -U pip
-          pip install -e ".[dev]"
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,api,plotly,graph]"
+
       - name: Lint
         run: |
           ruff check .
-          black --check . --extend-exclude '(^|.*/)src/null_trace\.py$'
+          black --check .
+
       - name: Tests
         run: |
-          pytest -q
+          pytest -q --cov=astrooracle --cov-report=term-missing --cov-fail-under=80
