@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-02-16T21:22:31.344397+00:00",
+  "offline": true,
+  "surveys": [
+    "DSS2 Red",
+    "2MASS J"
+  ],
+  "candidates_count": 6,
+  "cutouts_count": 12,
+  "viz3d_globe": "viz3d_globe.html",
+  "files": [
+    {
+      "path": "index.html",
+      "title": "Index (rapport)",
+      "type": "html",
+      "bytes": 18431,
+      "sha256": "3f72724a03c524814c2f3d5de650651b32e52134f7d9e30f36faa15381464c32"
+    },
+    {
+      "path": "candidates.json",
+      "title": "Candidates JSON",
+      "type": "json",
+      "bytes": 1930,
+      "sha256": "a1321852c5d89e0673be304901cdbbb4595c173b6cb2614bda024d8779f0503d"
+    },
+    {
+      "path": "candidates.csv",
+      "title": "Candidates CSV",
+      "type": "csv",
+      "bytes": 398,
+      "sha256": "ba30afdc1bb15916997030363c5667c0bf79334bd240ded1841c726cf7a56550"
+    },
+    {
+      "path": "report_meta.json",
+      "title": "Report meta",
+      "type": "json",
+      "bytes": 452,
+      "sha256": "7bb8365ba721b310e347fbec44007ac08759d20f896a44f573d9b01efb408837"
+    },
+    {
+      "path": "viz3d_globe.html",
+      "title": "Viz3D globe",
+      "type": "html",
+      "bytes": 82534,
+      "sha256": "a804dd3e951683deb9285b4c1dc9725750c44cc22ae9510ec35e97d8bc9f0462"
+    },
+    {
+      "path": "viz3d_scatter.html",
+      "title": "Viz3D scatter",
+      "type": "html",
+      "bytes": 10226,
+      "sha256": "96c052cf8de929129fb7e34f12c1955635d7903da1319d7e6bb3938073fc5100"
+    }
+  ],
+  "note": "manifest généré par AstroOracle batch_html"
+}

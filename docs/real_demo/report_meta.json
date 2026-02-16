@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-02-16T21:22:31.033560+00:00",
+  "candidates_count": 6,
+  "offline": true,
+  "surveys": [
+    "DSS2 Red",
+    "2MASS J"
+  ],
+  "pixels": 400,
+  "cutout_radius_arcmin": 0.15,
+  "n_query": 6,
+  "ranking": {
+    "strategy": "entropy",
+    "diversity": "kcenter",
+    "w_anomaly": 0.35,
+    "w_acq": 0.35,
+    "w_div": 0.2,
+    "w_prior": 0.1,
+    "acq_temperature": 1.0
+  },
+  "model_path": "best_model.pkl"
+}
