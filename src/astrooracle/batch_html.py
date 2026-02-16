@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import csv
 import hashlib
 import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -20,22 +19,12 @@ def _slug(s: Any) -> str:
     return re.sub(r"[^a-zA-Z0-9_-]+", "_", str(s))
 
 
-def _sha256_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def _save_png(array2d: np.ndarray, path: Path) -> None:
     """Save a 2D array as an 8-bit PNG with robust contrast."""
-
     path.parent.mkdir(parents=True, exist_ok=True)
 
     arr = np.asarray(array2d, dtype=float)
     finite = arr[np.isfinite(arr)]
-
     if finite.size == 0:
         norm = np.zeros_like(arr, dtype=np.uint8)
     else:
@@ -49,135 +38,196 @@ def _save_png(array2d: np.ndarray, path: Path) -> None:
     Image.fromarray(norm).save(path)
 
 
-def _write_candidates_csv(out_path: Path, rows: List[Dict[str, Any]]) -> None:
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    fieldnames = ["id", "ra", "dec", "score", "label"]
-    with out_path.open("w", encoding="utf-8", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=fieldnames)
-        w.writeheader()
-        for r in rows:
-            w.writerow(
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _guess_type(path: Path) -> str:
+    ext = path.suffix.lower().lstrip(".")
+    if ext in {"html", "htm"}:
+        return "html"
+    if ext in {"json", "jsonl"}:
+        return "json"
+    if ext in {"csv", "tsv"}:
+        return "csv"
+    if ext in {"png", "jpg", "jpeg", "webp", "gif"}:
+        return "image"
+    return "file"
+
+
+def _build_manifest(
+    cfg: OracleConfig,
+    out_dir: Path,
+    *,
+    candidates_count: int,
+    cutouts_count: int,
+    surveys: list[str],
+) -> dict[str, Any]:
+    files: list[dict[str, Any]] = []
+
+    curated = [
+        ("index.html", "Index (rapport)"),
+        ("candidates.json", "Candidates JSON"),
+        ("candidates.csv", "Candidates CSV"),
+        ("report_meta.json", "Report meta"),
+        ("manifest.json", "Manifest"),
+        ("viz3d_globe.html", "Viz3D globe"),
+        ("viz3d_scatter.html", "Viz3D scatter"),
+    ]
+
+    seen: set[str] = set()
+    for rel, title in curated:
+        p = out_dir / rel
+        if p.exists() and p.is_file():
+            files.append(
                 {
-                    "id": r.get("id", ""),
-                    "ra": r.get("ra", ""),
-                    "dec": r.get("dec", ""),
-                    "score": r.get("score", ""),
-                    "label": "",
+                    "path": rel,
+                    "title": title,
+                    "type": _guess_type(p),
+                    "bytes": int(p.stat().st_size),
+                    "sha256": _sha256(p),
                 }
             )
+            seen.add(rel)
 
-
-def _collect_files(out_dir: Path) -> List[Dict[str, Any]]:
-    files: List[Dict[str, Any]] = []
-    for p in sorted(out_dir.rglob("*")):
+    # Add other top-level files (avoid huge files and already listed items).
+    for p in sorted(out_dir.glob("*")):
         if not p.is_file():
             continue
-        rel = p.relative_to(out_dir).as_posix()
-        # Skip huge or irrelevant caches if any appear
-        if rel.startswith(".") or rel.endswith(".pyc"):
+        rel = p.name
+        if rel in seen:
+            continue
+        if p.stat().st_size > 25_000_000:
             continue
         files.append(
             {
                 "path": rel,
+                "title": rel,
+                "type": _guess_type(p),
                 "bytes": int(p.stat().st_size),
-                "sha256": _sha256_file(p),
+                "sha256": _sha256(p),
             }
         )
-    return files
+
+    return {
+        "schema_version": 1,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "offline": bool(cfg.offline),
+        "surveys": list(surveys),
+        "candidates_count": int(candidates_count),
+        "cutouts_count": int(cutouts_count),
+        "viz3d_globe": "viz3d_globe.html",
+        "files": files,
+        "note": "manifest généré par AstroOracle batch_html",
+    }
 
 
 def generate_batch_html(cfg: OracleConfig, candidates_df: pd.DataFrame, out_dir: Path) -> None:
     """Generate a fully static HTML report.
 
-    Output layout (minimum):
+    Output layout:
     - index.html (static UI)
+    - manifest.json (report file index)
+    - report_meta.json (small summary)
     - candidates.json (data for the UI)
+    - candidates.csv (portable table)
+    - cutouts/*.png
+    - viz3d_globe.html (best effort)
 
-    Optional:
-    - cutouts/*.png (if cutouts are generated and saved)
-    - report_meta.json (metadata for the report)
-    - manifest.json (file list + sha256 for auditing)
-    - viz3d_globe.html / viz3d_scatter.html (best effort, requires plotly)
+    The UI stores annotations locally (localStorage). Use the export buttons to download JSON or CSV.
     """
-
     out_dir.mkdir(parents=True, exist_ok=True)
     cut_dir = out_dir / "cutouts"
     cut_dir.mkdir(exist_ok=True)
 
-    # Normalize required columns
-    required = {"id", "ra", "dec", "anomaly_score"}
-    missing = required - set(candidates_df.columns)
-    if missing:
-        raise ValueError(f"Missing required columns: {sorted(missing)}")
-
-    # Build candidate records and optionally cutouts
-    recs: List[Dict[str, Any]] = []
-    surveys_seen: set[str] = set()
+    surveys = list(cfg.surveys)
+    recs: list[dict[str, Any]] = []
+    cutouts_total = 0
 
     for _, r in candidates_df.iterrows():
         ra = float(r["ra"])
         dec = float(r["dec"])
-        cid = str(r["id"])
-        score = float(r["anomaly_score"])
-
+        cid = r["id"]
         cutouts = fetch_cutouts(ra, dec, cfg)
 
-        surveys: List[str] = []
-        cutout_map: Dict[str, str] = {}
-
+        surveys_seen: list[str] = []
+        cutout_map: dict[str, str] = {}
         for survey, data in cutouts:
-            survey_s = str(survey)
-            surveys.append(survey_s)
-            surveys_seen.add(survey_s)
-
-            fname = f"{_slug(cid)}_{_slug(survey_s)}.png"
+            surveys_seen.append(str(survey))
+            fname = f"{_slug(cid)}_{_slug(survey)}.png"
             png_path = cut_dir / fname
-            try:
-                _save_png(data, png_path)
-                cutout_map[survey_s] = f"cutouts/{fname}"
-            except Exception:
-                # If PNG saving fails for any reason, keep the record without breaking the report
-                continue
+            _save_png(data, png_path)
+            cutout_map[str(survey)] = f"cutouts/{fname}"
+            cutouts_total += 1
 
         recs.append(
             {
-                "id": cid,
+                "id": str(cid),
                 "ra": ra,
                 "dec": dec,
-                "score": score,
-                "anomaly_score": score,
-                "surveys": surveys,
+                "score": float(r["anomaly_score"]),
+                "surveys": surveys_seen,
                 "cutouts": cutout_map,
             }
         )
 
     (out_dir / "candidates.json").write_text(
-        json.dumps(recs, indent=2, ensure_ascii=False), encoding="utf-8"
+        json.dumps(recs, indent=2, ensure_ascii=False),
+        encoding="utf-8",
     )
-    _write_candidates_csv(out_dir / "candidates.csv", recs)
 
-    report_meta = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "n_candidates": int(len(recs)),
-        "surveys": sorted(surveys_seen),
-        "offline": bool(getattr(cfg, "offline", False)),
-        "cutouts_dir": "cutouts/",
+    pd.DataFrame(
+        [
+            {
+                "id": rec["id"],
+                "ra": rec["ra"],
+                "dec": rec["dec"],
+                "anomaly_score": rec["score"],
+            }
+            for rec in recs
+        ]
+    ).to_csv(out_dir / "candidates.csv", index=False)
+
+    meta = {
+        "schema_version": 1,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "candidates_count": len(recs),
+        "offline": bool(cfg.offline),
+        "surveys": surveys,
+        "pixels": int(cfg.pixels),
+        "cutout_radius_arcmin": float(cfg.cutout_radius_arcmin),
+        "n_query": int(cfg.n_query),
+        "ranking": {
+            "strategy": cfg.ranking.strategy,
+            "diversity": cfg.ranking.diversity,
+            "w_anomaly": float(cfg.ranking.w_anomaly),
+            "w_acq": float(cfg.ranking.w_acq),
+            "w_div": float(cfg.ranking.w_div),
+            "w_prior": float(cfg.ranking.w_prior),
+            "acq_temperature": float(cfg.ranking.acq_temperature),
+        },
+        "model_path": str(cfg.model_path),
     }
     (out_dir / "report_meta.json").write_text(
-        json.dumps(report_meta, indent=2, ensure_ascii=False), encoding="utf-8"
+        json.dumps(meta, indent=2, ensure_ascii=False),
+        encoding="utf-8",
     )
 
-    # Static UI page
     template = Path(__file__).resolve().parents[2] / "templates" / "batch_index.html"
     (out_dir / "index.html").write_text(
-        template.read_text(encoding="utf-8"), encoding="utf-8"
+        template.read_text(encoding="utf-8"),
+        encoding="utf-8",
     )
 
-    # Best-effort 3D HTML exports
+    # Best-effort 3D HTML pages (optional).
     try:
         from .viz3d import build_viz3d_figure, write_viz3d_html
 
-        fig_globe = build_viz3d_figure(
+        fig = build_viz3d_figure(
             candidates_df,
             mode="globe",
             max_points=5000,
@@ -185,9 +235,14 @@ def generate_batch_html(cfg: OracleConfig, candidates_df: pd.DataFrame, out_dir:
             embed_cutouts=False,
             title="AstroOracle batch (globe)",
         )
-        write_viz3d_html(fig_globe, out_dir / "viz3d_globe.html", cdn=True)
+        write_viz3d_html(fig, out_dir / "viz3d_globe.html", cdn=True)
+    except Exception:
+        pass
 
-        fig_scatter = build_viz3d_figure(
+    try:
+        from .viz3d import build_viz3d_figure, write_viz3d_html
+
+        fig2 = build_viz3d_figure(
             candidates_df,
             mode="scatter",
             max_points=5000,
@@ -195,20 +250,18 @@ def generate_batch_html(cfg: OracleConfig, candidates_df: pd.DataFrame, out_dir:
             embed_cutouts=False,
             title="AstroOracle batch (scatter)",
         )
-        write_viz3d_html(fig_scatter, out_dir / "viz3d_scatter.html", cdn=True)
+        write_viz3d_html(fig2, out_dir / "viz3d_scatter.html", cdn=True)
     except Exception:
-        # Plotly may be missing. The report still works.
         pass
 
-    # Manifest (audit)
-    try:
-        manifest = {
-            "version": 1,
-            "generated_at": report_meta["generated_at"],
-            "files": _collect_files(out_dir),
-        }
-        (out_dir / "manifest.json").write_text(
-            json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
-        )
-    except Exception:
-        pass
+    manifest = _build_manifest(
+        cfg,
+        out_dir,
+        candidates_count=len(recs),
+        cutouts_count=cutouts_total,
+        surveys=surveys,
+    )
+    (out_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
