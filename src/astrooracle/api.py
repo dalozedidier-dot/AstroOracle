@@ -145,9 +145,15 @@ def create_app(cfg: Optional[OracleConfig] = None) -> FastAPI:
     @app.get("/dashboard", response_class=HTMLResponse)
     async def dashboard(request: Request, max_rows: int = 5000):
         ann = read_annotations(cfg)
-        ann_preview = ann.tail(int(min(len(ann), max_rows))).to_dict(orient="records") if not ann.empty else []
+        ann_preview = (
+            ann.tail(int(min(len(ann), max_rows))).to_dict(orient="records")
+            if not ann.empty
+            else []
+        )
         counts = (
-            ann["label"].value_counts().to_dict() if (not ann.empty and "label" in ann.columns) else {}
+            ann["label"].value_counts().to_dict()
+            if (not ann.empty and "label" in ann.columns)
+            else {}
         )
         return templates.TemplateResponse(
             request,
@@ -420,6 +426,7 @@ def create_app(cfg: Optional[OracleConfig] = None) -> FastAPI:
             raise HTTPException(status_code=400, detail=str(e)) from e
 
     return app
+
 
 # Backwards-compatible ASGI app (used by tests and by `uvicorn astrooracle.api:app`).
 app = create_app()
