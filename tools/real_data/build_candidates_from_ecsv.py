@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import argparse
 import gzip
-import hashlib
-import io
 from dataclasses import dataclass
 from pathlib import Path
 
