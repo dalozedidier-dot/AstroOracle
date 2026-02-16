@@ -1,19 +1,19 @@
-Workflows à conserver
-=====================
+# Workflows to keep
 
-Dans `.github/workflows/`, garde uniquement :
+Recommended minimal set to avoid a noisy Actions menu.
 
-- `ci.yml` (CI)
-- `docs.yml` (Docs)
-- `release.yml` (Release)
-- `batch_html_commit.yml` (rafraîchit le rapport offline versionné)
-- `real_data_offline.yml` (données réelles, offline)
-- `real_data_gaia.yml` (données réelles, RA/Dec Gaia)
-- `real_data_publish.yml` (publie un rapport real_demo dans docs/)
+Core:
+- CI
+- Docs
+- Release
 
-Supprime le reste des YAML si tu en as d'autres, sinon tu vas continuer à voir des workflows en double dans l'onglet Actions.
+Utility:
+- Format (autofix)
 
-Note Dependabot
----------------
+Real data demos:
+- Real data galaxy candidates (offline pseudo coords)
+- Real data galaxy candidates (Gaia coords)
+- Real data vari summary (offline pseudo coords)
 
-Si tu veux faire disparaitre “Dependabot Updates” du menu Actions, supprime `.github/dependabot.yml` et désactive Dependabot dans les settings du repo.
+Notes:
+- Delete any old YAML files that are not in this list to avoid duplicates in Actions.

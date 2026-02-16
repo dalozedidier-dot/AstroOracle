@@ -1,0 +1,52 @@
+name: Format (autofix)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to format (branch name, tag, or SHA). Leave empty for current.
+        required: false
+        default: ""
+      paths:
+        description: Paths passed to black (space separated). Default formats common code areas.
+        required: false
+        default: "src tests tools docs"
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install (dev)
+        run: |
+          python -m pip install -U pip
+          pip install -e ".[dev]" || pip install -e .
+
+      - name: Black format
+        run: |
+          black ${{ inputs.paths }}
+
+      - name: Commit and push if changed
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "style: black autofix"
+            git push
+          else
+            echo "No formatting changes."
+          fi

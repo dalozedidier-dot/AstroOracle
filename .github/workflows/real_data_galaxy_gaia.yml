@@ -1,0 +1,55 @@
+name: Real data galaxy candidates (Gaia coords)
+
+on:
+  workflow_dispatch:
+    inputs:
+      n:
+        description: Rows to sample
+        required: false
+        default: "150"
+      seed:
+        description: Random seed
+        required: false
+        default: "7"
+
+jobs:
+  realdata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install -U pip
+          pip install -e ".[dev,astro]" || pip install -e .
+          pip install pyarrow
+
+      - name: Build candidates.parquet (Gaia)
+        run: |
+          python tools/real_data/build_candidates_from_ecsv.py \
+            --input test_data/real/galaxy_candidates_sample.csv.gz \
+            --output candidates.parquet \
+            --mode gaia \
+            --n ${{ inputs.n }} \
+            --seed ${{ inputs.seed }}
+
+      - name: Make report HTML
+        run: |
+          python tools/real_data/make_report.py \
+            --candidates candidates.parquet \
+            --out-dir _ci_out/realdata_galaxy_gaia \
+            --title "AstroOracle real data galaxy candidates (Gaia coords)" \
+            --tag "galaxy_gaia"
+
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: realdata_galaxy_gaia
+          path: _ci_out/realdata_galaxy_gaia
