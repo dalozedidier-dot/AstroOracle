@@ -1,377 +1,518 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>AstroOracle batch | Rapport</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background: #0b1020; color: #e7ecff; }
-    a { color: #9ec5ff; }
-    .card { background: #111a33; border: 1px solid rgba(255,255,255,0.10); }
-    .muted { color: rgba(231,236,255,0.70); }
+    body { background: #0b1020; color: #e8ecff; }
+    a, a:hover { color: #c8d0ff; }
+    .card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); }
+    .muted { color: rgba(232,236,255,0.72); }
+    .sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 1rem; border-right: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.08); }
+    .table thead th { position: sticky; top: 0; background: #0b1020; }
+    .cutout { image-rendering: pixelated; border-radius: .5rem; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.03); }
+    .badge-soft { background: rgba(200,208,255,0.12); border: 1px solid rgba(200,208,255,0.24); color: #d8deff; }
+    .btn-outline-light { border-color: rgba(255,255,255,0.35); }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    .table { color: #e7ecff; }
-    .table thead th { color: rgba(231,236,255,0.85); border-color: rgba(255,255,255,0.10); }
-    .table td { border-color: rgba(255,255,255,0.08); }
-    .cutout-img { width: 100%; height: auto; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); }
-    .clickable-row { cursor: pointer; }
-    #plot { min-height: 360px; }
+    .smallish { font-size: 0.92rem; }
   </style>
 </head>
 <body>
-  <nav class="navbar navbar-dark" style="background:#0b1020;border-bottom:1px solid rgba(255,255,255,0.08)">
-    <div class="container py-2">
-      <span class="navbar-brand fw-semibold">AstroOracle batch</span>
-      <div class="ms-auto d-flex gap-2">
-        <button class="btn btn-sm btn-outline-light" id="btnExportJson">Export JSON</button>
-        <button class="btn btn-sm btn-outline-light" id="btnExportCsv">Export CSV</button>
-        <button class="btn btn-sm btn-outline-light" id="btnClear">Clear saved labels</button>
-        <a class="btn btn-sm btn-outline-light" id="linkViz3d" href="viz3d_globe.html" target="_blank" rel="noreferrer">Ouvrir la visualisation 3D</a>
-      </div>
-    </div>
-  </nav>
-
-  <main class="container py-4">
-    <div class="row g-4">
-      <div class="col-lg-7">
-        <div class="card p-3">
-          <div class="d-flex flex-wrap align-items-center justify-content-between">
-            <div>
-              <div class="fw-semibold">Rapport batch</div>
-              <div class="small muted" id="metaLine">Chargement...</div>
-            </div>
-            <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-light" id="btnPlot">Recharger plot</button>
-            </div>
+  <div class="container-fluid">
+    <div class="row g-0">
+      <div class="col-12 col-lg-3 sidebar">
+        <div class="mb-3">
+          <div class="d-flex align-items-center gap-2">
+            <div class="fw-bold fs-4">AstroOracle</div>
+            <span class="badge badge-soft">batch report</span>
           </div>
-          <div id="plot" class="mt-2"></div>
-          <div class="small muted mt-2">Données: <span class="mono" id="dataPath">candidates.json</span>. Cutouts: <span class="mono" id="cutoutsPath">cutouts/</span>.</div>
+          <div class="muted smallish mt-1">Navigation dans un rapport statique. Données locales, annotations en localStorage.</div>
         </div>
 
-        <div class="card p-3 mt-4">
-          <div class="fw-semibold">Candidats</div>
-          <div class="small muted">Cliquez une ligne pour voir les cutouts et annoter.</div>
-          <div class="table-responsive mt-2" style="max-height: 520px;">
-            <table class="table table-sm table-hover align-middle mb-0" id="candTable">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th class="text-end">Score</th>
-                  <th class="text-end">RA</th>
-                  <th class="text-end">Dec</th>
-                  <th>Label</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+        <div class="card p-3 mb-3">
+          <div class="fw-semibold mb-2">Sources</div>
+          <div class="smallish muted">
+            <div><span class="mono">candidates.json</span></div>
+            <div><span class="mono">cutouts/</span> (optionnel)</div>
+            <div><span class="mono">report_meta.json</span> et <span class="mono">manifest.json</span> (optionnels)</div>
           </div>
-        </div>
-      </div>
-
-      <div class="col-lg-5">
-        <div class="card p-3">
-          <div class="fw-semibold">Détails</div>
-          <div class="small muted">Le stockage se fait en local (localStorage). Exportez ensuite en CSV ou JSON.</div>
-          <div class="mt-2" id="selectedMeta"></div>
-
           <div class="mt-3">
-            <label class="form-label small muted">Commentaire</label>
-            <textarea id="commentBox" class="form-control form-control-sm" rows="3" placeholder="Optionnel"></textarea>
+            <label class="form-label smallish">Base du rapport</label>
+            <input id="baseInput" class="form-control form-control-sm mono" placeholder="ex: . ou batch_out_v11_offline"/>
+            <div class="d-flex gap-2 mt-2">
+              <button id="applyBaseBtn" class="btn btn-sm btn-outline-light">Charger</button>
+              <a id="openVizBtn" class="btn btn-sm btn-outline-light disabled" href="#" target="_blank" rel="noopener">Viz 3D</a>
+            </div>
+            <div class="muted smallish mt-2">Astuce: <span class="mono">?base=mon_dossier</span></div>
+          </div>
+        </div>
+
+        <div class="card p-3 mb-3">
+          <div class="fw-semibold mb-2">Annotations</div>
+          <div class="d-flex flex-wrap gap-2">
+            <button id="exportJsonBtn" class="btn btn-sm btn-outline-light">Export JSON</button>
+            <button id="exportCsvBtn" class="btn btn-sm btn-outline-light">Export CSV</button>
+            <button id="clearBtn" class="btn btn-sm btn-outline-light">Effacer</button>
+          </div>
+          <div class="muted smallish mt-2">Les labels sont stockés dans ton navigateur.</div>
+        </div>
+
+        <div class="card p-3">
+          <div class="fw-semibold mb-2">Fichiers du rapport</div>
+          <div id="filesBox" class="smallish muted">Chargement...</div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-9 p-3 p-lg-4">
+        <div class="card p-3 mb-3">
+          <div class="d-flex flex-wrap align-items-end justify-content-between gap-2">
+            <div>
+              <div class="fw-semibold">Candidats</div>
+              <div class="muted smallish" id="statsLine">Chargement...</div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <input id="searchInput" class="form-control form-control-sm mono" placeholder="recherche id..." style="min-width: 220px"/>
+              <select id="sortSelect" class="form-select form-select-sm mono" style="width: 220px">
+                <option value="score_desc">score (desc)</option>
+                <option value="score_asc">score (asc)</option>
+                <option value="id_asc">id (A-Z)</option>
+                <option value="id_desc">id (Z-A)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-12 col-xl-7">
+            <div class="card p-3">
+              <div class="table-responsive" style="max-height: 70vh;">
+                <table class="table table-sm table-dark align-middle mb-0">
+                  <thead>
+                    <tr class="smallish">
+                      <th>ID</th>
+                      <th class="text-end">Score</th>
+                      <th class="text-end">RA</th>
+                      <th class="text-end">Dec</th>
+                      <th>Label</th>
+                    </tr>
+                  </thead>
+                  <tbody id="candTbody">
+                    <tr><td colspan="5" class="muted">Chargement...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="muted smallish mt-2">Clique une ligne pour voir les détails et les cutouts.</div>
+            </div>
           </div>
 
-          <div class="row g-2 mt-3" id="cutouts"></div>
-
-          <div class="mt-3 small muted" id="noteLine">
-            Note: la page viz3d_globe.html peut dépendre de Plotly via CDN selon le mode d'export.
+          <div class="col-12 col-xl-5">
+            <div class="card p-3">
+              <div class="fw-semibold mb-2">Détails</div>
+              <div id="detailsBox" class="muted smallish">Sélectionne un candidat.</div>
+              <hr style="border-color: rgba(255,255,255,0.12)"/>
+              <div class="fw-semibold mb-2">Cutouts</div>
+              <div id="cutoutsBox" class="muted smallish">Aucun cutout.</div>
+            </div>
           </div>
+        </div>
+
+        <div class="card p-3 mt-3">
+          <div class="fw-semibold mb-2">Commentaire</div>
+          <textarea id="commentInput" class="form-control form-control-sm mono" rows="3" placeholder="note libre pour le candidat sélectionné"></textarea>
+          <div class="muted smallish mt-2">Le commentaire est stocké avec les labels dans le navigateur.</div>
         </div>
       </div>
     </div>
-
-    <footer class="container pt-4">
-      <div class="muted small">
-        Astuce: vous pouvez passer un autre dossier via <span class="mono">?base=mon_dossier</span> (il doit contenir <span class="mono">candidates.json</span> et un dossier <span class="mono">cutouts/</span>).
-      </div>
-    </footer>
-  </main>
+  </div>
 
 <script>
-  const LABELS = [
-    '',
-    'real_anomaly',
-    'artefact',
-    'known',
-    'new_type',
-    'unsure',
-  ];
+(function () {
+  const qs = new URLSearchParams(window.location.search);
+
+  function sanitizeBase(s) {
+    s = (s || "").trim();
+    if (!s) return ".";
+    // Basic guard against traversal
+    if (s.includes("..") || s.startsWith("/") || s.startsWith("\\")) return ".";
+    return s.replace(/\\/g, "/").replace(/\/+$/g, "");
+  }
 
   function slug(s) {
-    return String(s ?? '').replace(/[^a-zA-Z0-9_-]+/g, '_');
+    return String(s).replace(/[^a-zA-Z0-9_-]+/g, "_");
+  }
+
+  function join(base, rel) {
+    base = sanitizeBase(base);
+    if (base === "." || base === "") return rel;
+    return base + "/" + rel;
   }
 
   function storageKey(base) {
-    return `astrooracle_labels::${base}`;
+    return "astrooracle_labels::" + sanitizeBase(base);
   }
 
-  function loadSaved(base) {
-    try {
-      const raw = localStorage.getItem(storageKey(base));
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  }
-
-  function saveSaved(base, obj) {
-    localStorage.setItem(storageKey(base), JSON.stringify(obj || {}));
-  }
-
-  function downloadText(filename, text, mime='text/plain') {
-    const blob = new Blob([text], {type: mime});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
+  function downloadText(filename, text) {
+    const blob = new Blob([text], {type: "text/plain;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
+    URL.revokeObjectURL(url);
   }
 
-  function fmt(x, n=5) {
-    const v = Number(x);
-    if (!Number.isFinite(v)) return '';
-    return v.toFixed(n);
-  }
-
-  function guessCutoutPath(baseCutoutsDir, rec, survey) {
-    // Compatible with older candidates.json that only has surveys.
-    const cid = slug(rec.id);
-    const s = slug(survey);
-    return `${baseCutoutsDir}${cid}_${s}.png`;
-  }
-
-  async function fetchJson(path) {
-    const r = await fetch(path, {cache: 'no-store'});
-    if (!r.ok) throw new Error(`fetch failed: ${r.status}`);
+  async function fetchJson(url) {
+    const r = await fetch(url, {cache: "no-store"});
+    if (!r.ok) throw new Error("fetch failed: " + r.status);
     return await r.json();
   }
 
-  function renderPlot(recs) {
-    const xs = recs.map(r => Number(r.ra));
-    const ys = recs.map(r => Number(r.dec));
-    const zs = recs.map(r => Number(r.score ?? r.anomaly_score));
-    const ids = recs.map(r => String(r.id));
-    const trace = {
-      type: 'scatter3d',
-      mode: 'markers',
-      x: xs,
-      y: ys,
-      z: zs,
-      text: ids,
-      customdata: recs.map(r => [String(r.id), Number(r.ra), Number(r.dec), Number(r.score ?? r.anomaly_score)]),
-      hovertemplate: 'ID: %{customdata[0]}<br>RA: %{customdata[1]:.5f}<br>Dec: %{customdata[2]:.5f}<br>Score: %{customdata[3]:.4f}<extra></extra>',
-      marker: {size: 3},
-    };
-    const layout = {
-      paper_bgcolor: 'rgba(0,0,0,0)',
-      plot_bgcolor: 'rgba(0,0,0,0)',
-      font: {color: '#e7ecff'},
-      margin: {l: 0, r: 0, t: 10, b: 0},
-      scene: {
-        xaxis: {title: 'RA (deg)'},
-        yaxis: {title: 'Dec (deg)'},
-        zaxis: {title: 'Score'},
-      },
-    };
-    Plotly.newPlot('plot', [trace], layout, {displayModeBar: true, responsive: true});
-
-    const plotDiv = document.getElementById('plot');
-    plotDiv.on('plotly_click', (ev) => {
-      const p = ev.points && ev.points[0];
-      if (!p || !p.customdata) return;
-      const cid = String(p.customdata[0]);
-      const rec = recs.find(r => String(r.id) === cid);
-      if (rec) select(rec);
-    });
+  async function fetchText(url) {
+    const r = await fetch(url, {cache: "no-store"});
+    if (!r.ok) throw new Error("fetch failed: " + r.status);
+    return await r.text();
   }
 
-  let BASE = '';
-  let DATA_PATH = 'candidates.json';
-  let CUTOUTS_DIR = 'cutouts/';
-  let RECS = [];
-  let SAVED = {};
-  let SELECTED_ID = null;
+  async function exists(url) {
+    try {
+      const r = await fetch(url, {method: "GET", cache: "no-store"});
+      return r.ok;
+    } catch (e) {
+      return false;
+    }
+  }
 
-  function select(rec) {
-    SELECTED_ID = String(rec.id);
+  let base = sanitizeBase(qs.get("base") || ".");
+  let candidates = [];
+  let selectedId = null;
+  let labels = {};
+  let comments = {};
 
-    document.querySelectorAll('#candTable tbody tr').forEach((tr) => {
-      tr.classList.toggle('table-active', tr.getAttribute('data-id') === SELECTED_ID);
-    });
+  const baseInput = document.getElementById("baseInput");
+  const applyBaseBtn = document.getElementById("applyBaseBtn");
+  const openVizBtn = document.getElementById("openVizBtn");
+  const filesBox = document.getElementById("filesBox");
 
-    const meta = document.getElementById('selectedMeta');
-    meta.innerHTML = `
-      <div class="small">
-        <div>ID: <span class="mono">${rec.id}</span></div>
-        <div>Score: <span class="mono">${fmt(rec.score ?? rec.anomaly_score, 4)}</span></div>
-        <div>RA: <span class="mono">${fmt(rec.ra, 5)}</span> Dec: <span class="mono">${fmt(rec.dec, 5)}</span></div>
+  const candTbody = document.getElementById("candTbody");
+  const statsLine = document.getElementById("statsLine");
+  const detailsBox = document.getElementById("detailsBox");
+  const cutoutsBox = document.getElementById("cutoutsBox");
+
+  const searchInput = document.getElementById("searchInput");
+  const sortSelect = document.getElementById("sortSelect");
+
+  const exportJsonBtn = document.getElementById("exportJsonBtn");
+  const exportCsvBtn = document.getElementById("exportCsvBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const commentInput = document.getElementById("commentInput");
+
+  baseInput.value = base;
+
+  function loadLocal() {
+    labels = {};
+    comments = {};
+    try {
+      const raw = localStorage.getItem(storageKey(base));
+      if (raw) {
+        const obj = JSON.parse(raw);
+        labels = obj.labels || {};
+        comments = obj.comments || {};
+      }
+    } catch (e) {}
+  }
+
+  function saveLocal() {
+    try {
+      localStorage.setItem(storageKey(base), JSON.stringify({labels, comments}));
+    } catch (e) {}
+  }
+
+  function setVizButton(enabled) {
+    if (enabled) {
+      openVizBtn.classList.remove("disabled");
+      openVizBtn.href = join(base, "viz3d_globe.html");
+    } else {
+      openVizBtn.classList.add("disabled");
+      openVizBtn.href = "#";
+    }
+  }
+
+  function labelOf(id) {
+    return labels[id] || "";
+  }
+
+  function commentOf(id) {
+    return comments[id] || "";
+  }
+
+  function scoreValue(c) {
+    const v = (c.score !== undefined) ? c.score : c.anomaly_score;
+    const f = Number(v);
+    return Number.isFinite(f) ? f : NaN;
+  }
+
+  function fmt(x, nd = 5) {
+    const f = Number(x);
+    if (!Number.isFinite(f)) return "";
+    return f.toFixed(nd);
+  }
+
+  function setSelected(id) {
+    selectedId = id;
+    const c = candidates.find(x => String(x.id) === String(id));
+    if (!c) return;
+
+    const sc = scoreValue(c);
+    const lbl = labelOf(String(c.id));
+
+    detailsBox.innerHTML = `
+      <div class="mono"><span class="badge badge-soft">ID</span> ${String(c.id)}</div>
+      <div class="mt-2 smallish">
+        <div><span class="badge badge-soft">score</span> <span class="mono">${Number.isFinite(sc) ? sc.toFixed(6) : ""}</span></div>
+        <div><span class="badge badge-soft">ra</span> <span class="mono">${fmt(c.ra, 8)}</span></div>
+        <div><span class="badge badge-soft">dec</span> <span class="mono">${fmt(c.dec, 8)}</span></div>
+        <div class="mt-2">
+          <label class="form-label smallish">Label</label>
+          <select id="labelSelect" class="form-select form-select-sm mono">
+            <option value=""></option>
+            <option value="interesting">interesting</option>
+            <option value="artifact">artifact</option>
+            <option value="noise">noise</option>
+            <option value="unknown">unknown</option>
+          </select>
+        </div>
       </div>
     `;
 
-    const commentBox = document.getElementById('commentBox');
-    commentBox.value = (SAVED[SELECTED_ID] && SAVED[SELECTED_ID].comment) ? SAVED[SELECTED_ID].comment : '';
-    commentBox.oninput = () => {
-      SAVED[SELECTED_ID] = SAVED[SELECTED_ID] || {label: ''};
-      SAVED[SELECTED_ID].comment = commentBox.value;
-      saveSaved(BASE, SAVED);
+    const sel = document.getElementById("labelSelect");
+    sel.value = lbl;
+    sel.addEventListener("change", () => {
+      labels[String(c.id)] = sel.value;
+      saveLocal();
+      renderTable();
+    });
+
+    commentInput.value = commentOf(String(c.id));
+    commentInput.oninput = () => {
+      comments[String(c.id)] = commentInput.value || "";
+      saveLocal();
     };
 
-    const box = document.getElementById('cutouts');
-    box.innerHTML = '';
+    renderCutouts(c);
+  }
 
-    const cutMap = rec.cutouts || null;
-    const surveys = rec.surveys || (cutMap ? Object.keys(cutMap) : []);
+  function renderCutouts(c) {
+    const surveys = (c.surveys || []).map(String);
+    const mapping = c.cutouts || null;
 
-    if (!surveys || surveys.length === 0) {
-      box.innerHTML = '<div class="muted small">Aucun cutout listé.</div>';
+    if (!surveys.length) {
+      cutoutsBox.textContent = "Aucun cutout.";
       return;
     }
 
-    for (const s of surveys) {
-      const col = document.createElement('div');
-      col.className = 'col-6';
-      const src = cutMap && cutMap[s] ? (BASE ? `${BASE}/${cutMap[s]}` : cutMap[s]) : (BASE ? `${BASE}/${guessCutoutPath(CUTOUTS_DIR, rec, s)}` : guessCutoutPath(CUTOUTS_DIR, rec, s));
-      col.innerHTML = `
-        <div class="small muted mb-1">${s}</div>
-        <img class="cutout-img" src="${src}" alt="${s}" onerror="this.style.opacity=0.35;" />
-      `;
-      box.appendChild(col);
+    const items = surveys.map(s => {
+      let rel = null;
+      if (mapping && mapping[s]) rel = mapping[s];
+      if (!rel) rel = "cutouts/" + slug(c.id) + "_" + slug(s) + ".png";
+      const url = join(base, rel);
+      return {survey: s, url};
+    });
+
+    cutoutsBox.innerHTML = items.map(it => `
+      <div class="mb-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="mono">${it.survey}</div>
+          <a class="smallish" href="${it.url}" target="_blank" rel="noopener">ouvrir</a>
+        </div>
+        <img class="cutout w-100 mt-2" src="${it.url}" alt="${it.survey}" onerror="this.style.opacity=0.35; this.title='cutout introuvable';"/>
+      </div>
+    `).join("");
+  }
+
+  function filteredCandidates() {
+    const q = (searchInput.value || "").trim().toLowerCase();
+    let arr = candidates.slice();
+
+    if (q) {
+      arr = arr.filter(c => String(c.id).toLowerCase().includes(q));
     }
+
+    const mode = sortSelect.value;
+    if (mode === "score_desc") {
+      arr.sort((a,b) => (scoreValue(b) - scoreValue(a)));
+    } else if (mode === "score_asc") {
+      arr.sort((a,b) => (scoreValue(a) - scoreValue(b)));
+    } else if (mode === "id_asc") {
+      arr.sort((a,b) => String(a.id).localeCompare(String(b.id)));
+    } else if (mode === "id_desc") {
+      arr.sort((a,b) => String(b.id).localeCompare(String(a.id)));
+    }
+    return arr;
   }
 
   function renderTable() {
-    const tbody = document.querySelector('#candTable tbody');
-    tbody.innerHTML = '';
+    const arr = filteredCandidates();
+    statsLine.textContent = `affichés: ${arr.length} sur ${candidates.length}`;
 
-    for (const rec of RECS) {
-      const id = String(rec.id);
-      const tr = document.createElement('tr');
-      tr.className = 'clickable-row';
-      tr.setAttribute('data-id', id);
+    if (!arr.length) {
+      candTbody.innerHTML = `<tr><td colspan="5" class="muted">Aucun candidat</td></tr>`;
+      return;
+    }
 
-      const saved = SAVED[id] || {};
-      const label = saved.label || '';
-
-      tr.innerHTML = `
-        <td class="mono">${id}</td>
-        <td class="text-end mono">${fmt(rec.score ?? rec.anomaly_score, 4)}</td>
-        <td class="text-end mono">${fmt(rec.ra, 5)}</td>
-        <td class="text-end mono">${fmt(rec.dec, 5)}</td>
-        <td>
-          <select class="form-select form-select-sm" data-id="${id}">
-            ${LABELS.map(v => `<option value="${v}" ${v===label ? 'selected' : ''}>${v || '(none)'}</option>`).join('')}
-          </select>
-        </td>
+    candTbody.innerHTML = arr.map(c => {
+      const id = String(c.id);
+      const lbl = labelOf(id);
+      const sc = scoreValue(c);
+      const rowClass = (id === selectedId) ? "table-active" : "";
+      return `
+        <tr class="${rowClass}" data-id="${id}" style="cursor:pointer">
+          <td class="mono">${id}</td>
+          <td class="text-end mono">${Number.isFinite(sc) ? sc.toFixed(6) : ""}</td>
+          <td class="text-end mono">${fmt(c.ra, 6)}</td>
+          <td class="text-end mono">${fmt(c.dec, 6)}</td>
+          <td class="mono">${lbl}</td>
+        </tr>
       `;
+    }).join("");
 
-      tr.addEventListener('click', (ev) => {
-        // Avoid selecting when clicking the select itself.
-        if (ev.target && ev.target.tagName && ev.target.tagName.toLowerCase() === 'select') return;
-        select(rec);
-      });
-
-      tbody.appendChild(tr);
-    }
-
-    document.querySelectorAll('#candTable select').forEach((sel) => {
-      sel.addEventListener('change', () => {
-        const id = String(sel.getAttribute('data-id'));
-        SAVED[id] = SAVED[id] || {comment: ''};
-        SAVED[id].label = sel.value;
-        saveSaved(BASE, SAVED);
-      });
+    candTbody.querySelectorAll("tr[data-id]").forEach(tr => {
+      tr.addEventListener("click", () => setSelected(tr.getAttribute("data-id")));
     });
-
-    if (RECS.length > 0) select(RECS[0]);
   }
 
-  function exportJson() {
-    const out = [];
-    for (const rec of RECS) {
-      const id = String(rec.id);
-      const s = SAVED[id] || {};
-      if (!s.label && !s.comment) continue;
-      out.push({
-        id: id,
-        ra: Number(rec.ra),
-        dec: Number(rec.dec),
-        anomaly_score: Number(rec.score ?? rec.anomaly_score),
-        label: s.label || '',
-        comment: s.comment || '',
-      });
+  async function renderFilesList() {
+    filesBox.textContent = "Chargement...";
+    const manifestUrl = join(base, "manifest.json");
+    const metaUrl = join(base, "report_meta.json");
+    const known = [
+      {name: "candidates.json", url: join(base, "candidates.json")},
+      {name: "candidates.csv", url: join(base, "candidates.csv")},
+      {name: "report_meta.json", url: metaUrl},
+      {name: "manifest.json", url: manifestUrl},
+      {name: "viz3d_globe.html", url: join(base, "viz3d_globe.html")},
+      {name: "viz3d_scatter.html", url: join(base, "viz3d_scatter.html")},
+    ];
+
+    if (await exists(manifestUrl)) {
+      try {
+        const mani = await fetchJson(manifestUrl);
+        const files = (mani.files || []).map(f => ({
+          name: String(f.path || f.name || ""),
+          sha256: f.sha256 || "",
+          bytes: f.bytes || f.size_bytes || ""
+        }));
+        filesBox.innerHTML = `
+          <div class="muted smallish mb-2">manifest.json détecté</div>
+          <ul class="mb-0">
+            ${files.slice(0, 60).map(f => `
+              <li class="mono">
+                <a href="${join(base, f.name)}" target="_blank" rel="noopener">${f.name}</a>
+                ${f.bytes ? `<span class="muted">(${f.bytes} B)</span>` : ""}
+              </li>
+            `).join("")}
+          </ul>
+        `;
+        return;
+      } catch (e) {
+        // fallback below
+      }
     }
-    downloadText('annotations.json', JSON.stringify(out, null, 2), 'application/json');
-  }
 
-  function exportCsv() {
-    const rows = ['id,ra,dec,anomaly_score,label,comment'];
-    for (const rec of RECS) {
-      const id = String(rec.id);
-      const s = SAVED[id] || {};
-      if (!s.label && !s.comment) continue;
-      const comment = String(s.comment || '').replace(/"/g, '""');
-      rows.push(`${id},${Number(rec.ra)},${Number(rec.dec)},${Number(rec.score ?? rec.anomaly_score)},${s.label || ''},"${comment}"`);
+    // fallback: probe known files
+    const ok = [];
+    for (const k of known) {
+      if (await exists(k.url)) ok.push(k);
     }
-    downloadText('annotations.csv', rows.join('\n'), 'text/csv');
+    if (!ok.length) {
+      filesBox.textContent = "Aucun fichier détecté. Vérifie la base.";
+      return;
+    }
+    filesBox.innerHTML = `
+      <ul class="mb-0">
+        ${ok.map(k => `<li class="mono"><a href="${k.url}" target="_blank" rel="noopener">${k.name}</a></li>`).join("")}
+      </ul>
+    `;
   }
 
-  function clearSaved() {
-    SAVED = {};
-    saveSaved(BASE, SAVED);
-    renderTable();
-  }
+  async function loadCandidates() {
+    loadLocal();
+    detailsBox.textContent = "Sélectionne un candidat.";
+    cutoutsBox.textContent = "Aucun cutout.";
+    selectedId = null;
 
-  async function init() {
-    const params = new URLSearchParams(window.location.search);
-    BASE = (params.get('base') || '').trim();
-
-    DATA_PATH = BASE ? `${BASE}/candidates.json` : 'candidates.json';
-    CUTOUTS_DIR = BASE ? `${BASE}/cutouts/` : 'cutouts/';
-
-    document.getElementById('dataPath').textContent = DATA_PATH;
-    document.getElementById('cutoutsPath').textContent = CUTOUTS_DIR;
-
-    SAVED = loadSaved(BASE);
-
-    // Hide viz3d link if file does not exist.
+    const url = join(base, "candidates.json");
     try {
-      const rr = await fetch(BASE ? `${BASE}/viz3d_globe.html` : 'viz3d_globe.html', {method: 'HEAD'});
-      if (!rr.ok) document.getElementById('linkViz3d').style.display = 'none';
-      else document.getElementById('linkViz3d').href = BASE ? `${BASE}/viz3d_globe.html` : 'viz3d_globe.html';
-    } catch {
-      document.getElementById('linkViz3d').style.display = 'none';
+      candidates = await fetchJson(url);
+      if (!Array.isArray(candidates)) throw new Error("candidates.json doit être une liste");
+      renderTable();
+      await renderFilesList();
+
+      // enable viz button only if file exists
+      setVizButton(await exists(join(base, "viz3d_globe.html")));
+
+    } catch (e) {
+      candidates = [];
+      candTbody.innerHTML = `<tr><td colspan="5" class="muted">Impossible de charger ${url}</td></tr>`;
+      statsLine.textContent = "échec de chargement";
+      filesBox.textContent = "Aucun fichier détecté.";
+      setVizButton(false);
     }
-
-    RECS = await fetchJson(DATA_PATH);
-    // Sort by score desc
-    RECS.sort((a,b) => Number(b.score ?? b.anomaly_score) - Number(a.score ?? a.anomaly_score));
-
-    document.getElementById('metaLine').textContent = `${RECS.length} candidats. Labels sauvegardés: ${Object.keys(SAVED).length}.`;
-
-    renderPlot(RECS);
-    renderTable();
   }
 
-  document.getElementById('btnExportJson').addEventListener('click', exportJson);
-  document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
-  document.getElementById('btnClear').addEventListener('click', clearSaved);
-  document.getElementById('btnPlot').addEventListener('click', () => renderPlot(RECS));
-
-  init().catch((e) => {
-    console.error(e);
-    document.getElementById('metaLine').textContent = `Erreur de chargement. Vérifiez candidates.json et cutouts/.`;
+  applyBaseBtn.addEventListener("click", async () => {
+    base = sanitizeBase(baseInput.value || ".");
+    const u = new URL(window.location.href);
+    u.searchParams.set("base", base);
+    window.history.replaceState({}, "", u.toString());
+    await loadCandidates();
   });
+
+  searchInput.addEventListener("input", renderTable);
+  sortSelect.addEventListener("change", renderTable);
+
+  exportJsonBtn.addEventListener("click", () => {
+    const out = Object.keys(labels).sort().map(id => ({
+      id,
+      label: labels[id] || "",
+      comment: comments[id] || ""
+    }));
+    downloadText("annotations.json", JSON.stringify(out, null, 2));
+  });
+
+  exportCsvBtn.addEventListener("click", () => {
+    const rows = Object.keys(labels).sort().map(id => ({
+      id,
+      label: labels[id] || "",
+      comment: (comments[id] || "").replace(/\n/g, " ").replace(/\r/g, " ")
+    }));
+    const header = ["id","label","comment"];
+    const lines = [header.join(",")].concat(rows.map(r => {
+      const esc = (s) => {
+        s = String(s ?? "");
+        if (s.includes(",") || s.includes('"')) return '"' + s.replace(/"/g, '""') + '"';
+        return s;
+      };
+      return [esc(r.id), esc(r.label), esc(r.comment)].join(",");
+    }));
+    downloadText("annotations.csv", lines.join("\n"));
+  });
+
+  clearBtn.addEventListener("click", () => {
+    labels = {};
+    comments = {};
+    saveLocal();
+    renderTable();
+    if (selectedId) setSelected(selectedId);
+  });
+
+  // init
+  loadCandidates();
+})();
 </script>
+
 </body>
 </html>
