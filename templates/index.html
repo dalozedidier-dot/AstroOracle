@@ -3,84 +3,92 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AstroOracle | Triage d'anomalies</title>
+  <title>{{ (project.name if project is defined and project.name is defined else "AstroOracle") }}{% if project is defined and project.version is defined %} v{{ project.version }}{% endif %}</title>
+
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+
   <style>
-    body { background: #0b1020; color: #e7ecff; }
-    a { color: #9ec5ff; }
-    .card { background: #111a33; border: 1px solid rgba(255,255,255,0.10); }
-    .muted { color: rgba(231,236,255,0.70); }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    .btn-outline-light { border-color: rgba(255,255,255,0.30); }
-    .table { color: #e7ecff; }
-    .table thead th { color: rgba(231,236,255,0.85); border-color: rgba(255,255,255,0.10); }
-    .table td { border-color: rgba(255,255,255,0.08); }
-    .badge-soft { background: rgba(158,197,255,0.18); border: 1px solid rgba(158,197,255,0.25); }
-    .cutout-img { width: 100%; height: auto; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); }
-    .small-kv { font-size: 0.95rem; }
-    #plot { min-height: 420px; }
-    .clickable-row { cursor: pointer; }
+    :root { --ao-bg: #0b1020; --ao-card: #111a33; --ao-text: #e7ecff; --ao-muted: #aab3d6; }
+    body { background: radial-gradient(1200px 800px at 15% 10%, #192a57 0%, var(--ao-bg) 60%); color: var(--ao-text); }
+    a { color: #b9c6ff; }
+    .ao-card { background: rgba(17, 26, 51, 0.72); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; }
+    .ao-pill { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.10); border-radius: 999px; padding: 0.25rem 0.6rem; color: var(--ao-muted); font-size: 0.85rem; }
+    .ao-muted { color: var(--ao-muted); }
+    .plot-box { min-height: 420px; height: 52vh; max-height: 640px; }
+    .cutout-img { width: 100%; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.25); }
+    .candidate-row { cursor: pointer; }
+    .candidate-row:hover { background: rgba(255,255,255,0.04); }
+    pre { white-space: pre-wrap; word-break: break-word; color: var(--ao-text); }
+    .form-control, .form-select { background-color: rgba(255,255,255,0.06); color: var(--ao-text); border: 1px solid rgba(255,255,255,0.12); }
+    .form-control::file-selector-button { background: rgba(255,255,255,0.10); color: var(--ao-text); border: 0; }
+    .btn-primary { background: #4a6cff; border: 0; }
+    .btn-primary:hover { background: #3658f2; }
+    code { color: var(--ao-text); }
   </style>
 </head>
+
 <body>
-  <nav class="navbar navbar-expand-lg navbar-dark" style="background:#0b1020;border-bottom:1px solid rgba(255,255,255,0.08)">
-    <div class="container py-2">
-      <a class="navbar-brand fw-semibold" href="/">AstroOracle</a>
-      <span class="badge badge-soft ms-2">v{{ project.version }}</span>
-      <div class="ms-auto d-flex gap-2">
-        <a class="btn btn-sm btn-outline-light" href="/dashboard">Dashboard</a>
-        <a class="btn btn-sm btn-outline-light" href="/docs">Docs</a>
-      </div>
-    </div>
-  </nav>
+  <div class="container py-4 py-lg-5">
 
-  <header class="container py-4">
-    <div class="row align-items-center g-3">
-      <div class="col-lg-8">
-        <h1 class="display-6 mb-2">Triagez vos anomalies astro en 3 clics avec l'apprentissage actif.</h1>
-        <div class="muted">API FastAPI, cutouts SkyView, visualisation 3D Plotly, mode Chaos en preview.</div>
-      </div>
-      <div class="col-lg-4 text-lg-end">
-        <div class="muted small">Serveur local</div>
-        <div class="mono small">astrooracle serve</div>
-        <div class="mono small">uvicorn app:app --reload</div>
-      </div>
-    </div>
-  </header>
-
-  <main class="container pb-5">
-    <div class="row g-4">
-      <div class="col-lg-7">
-        <div class="card p-3">
-          <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-            <div class="fw-semibold">Démo 3D</div>
-            <span class="muted small">Cliquez un point ou un candidat pour prévisualiser ses cutouts.</span>
-            <div class="ms-auto d-flex gap-2">
-              <button class="btn btn-sm btn-outline-light" id="btnScatter">Scatter</button>
-              <button class="btn btn-sm btn-outline-light" id="btnGlobe">Globe</button>
-              <button class="btn btn-sm btn-outline-light" id="btnReload">Recharger</button>
-            </div>
-          </div>
-          <div id="plot"></div>
-          <div class="d-flex align-items-center justify-content-between mt-2">
-            <div class="small muted">Source: endpoint <span class="mono">/viz3d</span></div>
-            <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" role="switch" id="toggleChaos" />
-              <label class="form-check-label" for="toggleChaos">Mode Chaos</label>
-            </div>
+    <header class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+      <div class="d-flex align-items-center gap-3">
+        <div class="ao-card d-flex align-items-center justify-content-center" style="width:44px;height:44px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2l1.7 6.3L20 10l-6.3 1.7L12 18l-1.7-6.3L4 10l6.3-1.7L12 2z" stroke="rgba(231,236,255,0.9)" stroke-width="1.6"/>
+          </svg>
+        </div>
+        <div>
+          <div class="h3 m-0">{{ (project.name if project is defined and project.name is defined else "AstroOracle") }}</div>
+          <div class="ao-muted">
+            {{ (project.tagline if project is defined and project.tagline is defined else "Triagez vos anomalies astro en 3 clics avec l'apprentissage actif.") }}
           </div>
         </div>
       </div>
 
-      <div class="col-lg-5">
-        <div class="card p-3 mb-4">
-          <div class="d-flex align-items-center justify-content-between">
-            <div class="fw-semibold">Top candidats</div>
-            <div class="muted small">Top-{{ top_candidates|length }} (défaut)</div>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        {% if project is defined and project.version is defined %}
+          <span class="ao-pill">v{{ project.version }}</span>
+        {% endif %}
+        <span class="ao-pill">API FastAPI</span>
+        <span class="ao-pill">Plotly</span>
+        <span class="ao-pill">Batch report</span>
+      </div>
+    </header>
+
+    <div class="row g-4">
+      <div class="col-12 col-lg-7">
+        <section class="ao-card p-3 p-lg-4">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+            <div>
+              <div class="h5 mb-0">Rapport</div>
+              <div class="ao-muted">Visualisation 3D des candidats et accès rapide aux cutouts.</div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <select id="vizMode" class="form-select form-select-sm" style="width: 160px;">
+                <option value="scatter" selected>Scatter</option>
+                <option value="globe">Globe</option>
+              </select>
+              <button id="reloadViz" class="btn btn-sm btn-outline-light">Recharger</button>
+            </div>
           </div>
-          <div class="table-responsive mt-2" style="max-height: 260px;">
-            <table class="table table-sm table-hover align-middle mb-0">
+
+          <div id="plot" class="plot-box"></div>
+          <div id="plotStatus" class="small ao-muted mt-2"></div>
+        </section>
+      </div>
+
+      <div class="col-12 col-lg-5">
+        <section class="ao-card p-3 p-lg-4 mb-4">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="h5 mb-0">Top candidats</div>
+            <div class="ao-muted small">
+              {% if top_candidates is defined %}Top-{{ top_candidates|length }}{% else %}Top-0{% endif %}
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm table-dark align-middle mb-0">
               <thead>
                 <tr>
                   <th>ID</th>
@@ -89,287 +97,223 @@
                   <th class="text-end">Dec</th>
                 </tr>
               </thead>
-              <tbody>
-                {% for c in top_candidates %}
-                <tr class="clickable-row" data-id="{{ c.id }}" data-ra="{{ c.ra }}" data-dec="{{ c.dec }}" data-score="{{ c.anomaly_score }}">
-                  <td class="mono">{{ c.id }}</td>
-                  <td class="text-end mono">{{ '%.4f'|format(c.anomaly_score) }}</td>
-                  <td class="text-end mono">{{ '%.5f'|format(c.ra) }}</td>
-                  <td class="text-end mono">{{ '%.5f'|format(c.dec) }}</td>
-                </tr>
-                {% endfor %}
-                {% if top_candidates|length == 0 %}
-                <tr><td colspan="4" class="muted">Aucun candidat dans le fichier actuel.</td></tr>
+              <tbody id="candidatesTable">
+                {% if top_candidates is defined %}
+                  {% for c in top_candidates %}
+                  <tr class="candidate-row" data-cid="{{ c.id }}" data-ra="{{ c.ra }}" data-dec="{{ c.dec }}">
+                    <td class="text-truncate" style="max-width: 160px;">{{ c.id }}</td>
+                    <td class="text-end">{{ '%.4f'|format(c.anomaly_score) }}</td>
+                    <td class="text-end">{{ '%.5f'|format(c.ra) }}</td>
+                    <td class="text-end">{{ '%.5f'|format(c.dec) }}</td>
+                  </tr>
+                  {% endfor %}
                 {% endif %}
               </tbody>
             </table>
           </div>
-        </div>
 
-        <div class="card p-3">
-          <div class="fw-semibold mb-2">Prévisualisation cutouts</div>
-          <div class="small muted mb-2">Sélectionnez un candidat dans la table ou cliquez un point 3D.</div>
-          <div id="selectedMeta" class="small-kv muted"></div>
-          <div id="cutouts" class="row g-2 mt-1"></div>
-          <div id="chaosBox" class="mt-3" style="display:none;">
-            <div class="fw-semibold">Chaos</div>
-            <pre class="mono mt-2 mb-0" style="white-space:pre-wrap;background:#0b1020;border:1px solid rgba(255,255,255,0.10);padding:10px;border-radius:10px;" id="chaosJson">{}</pre>
-          </div>
-        </div>
-      </div>
-    </div>
+          <hr class="border-light border-opacity-10 my-3" />
 
-    <div class="row g-4 mt-1">
-      <div class="col-lg-12">
-        <div class="card p-3">
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <div class="fw-semibold">Run Oracle</div>
-            <div class="muted small">Interface CLI-like: RA, Dec, upload CSV ou Parquet, exécution via <span class="mono">/run</span>.</div>
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="small ao-muted">Cutouts</div>
+              <div id="cutoutMeta" class="small">Sélectionnez un candidat</div>
+            </div>
+            <div class="form-check form-switch m-0">
+              <input class="form-check-input" type="checkbox" role="switch" id="modeChaos">
+              <label class="form-check-label small ao-muted" for="modeChaos">Mode Chaos</label>
+            </div>
           </div>
-          <form id="runForm" class="row g-2 mt-2" enctype="multipart/form-data">
-            <div class="col-md-3">
-              <label class="form-label small muted">RA (deg)</label>
-              <input class="form-control form-control-sm mono" name="ra" placeholder="ex: 205.51" />
+
+          <div class="row g-2 mt-2" id="cutoutsGrid"></div>
+        </section>
+
+        <section class="ao-card p-3 p-lg-4">
+          <div class="h5 mb-0">Run Oracle</div>
+          <div class="ao-muted mb-3">RA, Dec, upload CSV ou Parquet, puis exécution via <code>/run</code>.</div>
+
+          <form id="runForm" class="vstack gap-2">
+            <div class="row g-2">
+              <div class="col">
+                <label class="form-label small ao-muted mb-1">RA (deg)</label>
+                <input class="form-control" type="number" step="any" name="ra" placeholder="ex: 205.51" />
+              </div>
+              <div class="col">
+                <label class="form-label small ao-muted mb-1">Dec (deg)</label>
+                <input class="form-control" type="number" step="any" name="dec" placeholder="ex: -15.72" />
+              </div>
             </div>
-            <div class="col-md-3">
-              <label class="form-label small muted">Dec (deg)</label>
-              <input class="form-control form-control-sm mono" name="dec" placeholder="ex: -15.72" />
+
+            <div>
+              <label class="form-label small ao-muted mb-1">Candidats (CSV ou Parquet)</label>
+              <input class="form-control" type="file" name="candidates_file" accept=".csv,.parquet,.pq,.tsv" />
+              <div class="small ao-muted mt-1">Colonnes: id, ra, dec, anomaly_score</div>
             </div>
-            <div class="col-md-3">
-              <label class="form-label small muted">Candidats (CSV ou Parquet)</label>
-              <input class="form-control form-control-sm" type="file" name="candidates" />
-            </div>
-            <div class="col-md-1">
-              <label class="form-label small muted">k</label>
-              <input class="form-control form-control-sm mono" name="k" value="16" />
-            </div>
-            <div class="col-md-2">
-              <label class="form-label small muted">Mode</label>
-              <select class="form-select form-select-sm" name="mode">
-                <option value="vanilla">vanilla</option>
-                <option value="hybrid">hybrid</option>
-              </select>
-            </div>
-            <div class="col-12 d-flex gap-2 mt-2">
-              <button class="btn btn-sm btn-primary" type="submit">Run Oracle</button>
-              <div class="small muted align-self-center">Colonnes requises: <span class="mono">id, ra, dec, anomaly_score</span></div>
+
+            <div class="row g-2 align-items-end">
+              <div class="col">
+                <label class="form-label small ao-muted mb-1">k</label>
+                <input class="form-control" type="number" name="k" value="5" min="1" max="1000" />
+              </div>
+              <div class="col">
+                <button class="btn btn-primary w-100" type="submit" id="runBtn">Run Oracle</button>
+              </div>
             </div>
           </form>
 
-          <div class="mt-3" id="runResult" style="display:none;">
-            <div class="d-flex flex-wrap align-items-center justify-content-between">
-              <div class="fw-semibold">Résultat (batch)</div>
-              <div class="muted small" id="runMeta"></div>
-            </div>
-            <div class="table-responsive mt-2">
-              <table class="table table-sm table-hover align-middle mb-0" id="runTable">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th class="text-end">Score</th>
-                    <th class="text-end">RA</th>
-                    <th class="text-end">Dec</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
+          <div id="runStatus" class="small ao-muted mt-2"></div>
+          <div class="ao-card p-2 mt-2" style="background: rgba(0,0,0,0.18);">
+            <pre id="runOutput" class="m-0 small"></pre>
           </div>
-
-        </div>
+        </section>
       </div>
     </div>
 
-    <footer class="container pt-4">
-      <div class="muted small">
-        AstroOracle. Liens: 
-        <a href="https://github.com/dalozedidier-dot/AstroOracle" target="_blank" rel="noreferrer">GitHub</a>
-        <span class="muted"> | </span>
-        <a href="https://github.com/dalozedidier-dot/AstroOracle#readme" target="_blank" rel="noreferrer">Docs</a>
-        <span class="muted"> | </span>
-        <a href="https://colab.research.google.com" target="_blank" rel="noreferrer">Colab</a>
+    <footer class="mt-4 pt-4 border-top border-light border-opacity-10 d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
+      <div class="ao-muted small">
+        AstroOracle. Index orientée rapport.
+      </div>
+      <div class="small">
+        {% if project is defined and project.repo_url is defined %}
+          <a href="{{ project.repo_url }}" target="_blank" rel="noreferrer">GitHub</a>
+        {% else %}
+          <a href="#" onclick="return false;">GitHub</a>
+        {% endif %}
       </div>
     </footer>
-  </main>
 
-<script>
-  const state = {
-    mode: 'scatter',
-    selected: null,
-    chaosEnabled: false,
-  };
+  </div>
 
-  function fmt(x, n=5) {
-    const v = Number(x);
-    if (!Number.isFinite(v)) return '';
-    return v.toFixed(n);
-  }
+  <script>
+    const initialTop = {{ (top_candidates_json|default('[]')) | safe }};
 
-  async function loadPlot(mode) {
-    state.mode = mode;
-    const url = `/viz3d?mode=${encodeURIComponent(mode)}&max_points=5000`;
-    const r = await fetch(url);
-    const fig = await r.json();
-    const plotDiv = document.getElementById('plot');
-    await Plotly.newPlot(plotDiv, fig.data || [], fig.layout || {}, {displayModeBar: true, responsive: true});
+    function fmt(x, digits=4) {
+      const v = Number(x);
+      if (!Number.isFinite(v)) return String(x);
+      return v.toFixed(digits);
+    }
 
-    plotDiv.on('plotly_click', async (ev) => {
-      try {
-        const p = ev.points && ev.points[0];
-        if (!p) return;
-        const cd = p.customdata;
-        // customdata: [id, ra, dec, score, img] in our viz3d builder when cutouts exist.
-        // fallback: read from hovertext.
-        const id = cd && cd[0] ? cd[0] : (p.hovertext || '');
-        const ra = cd && cd[1] ? Number(cd[1]) : Number(p.x);
-        const dec = cd && cd[2] ? Number(cd[2]) : Number(p.y);
-        const score = cd && cd[3] ? Number(cd[3]) : Number(p.z);
-        await selectCandidate({id, ra, dec, anomaly_score: score});
-      } catch (e) {
-        console.warn(e);
+    async function fetchJSON(url, opts={}) {
+      const r = await fetch(url, opts);
+      if (!r.ok) {
+        const t = await r.text();
+        throw new Error(`HTTP ${r.status}: ${t.slice(0, 2000)}`);
       }
-    });
-  }
-
-  function setSelectedMeta(c) {
-    const el = document.getElementById('selectedMeta');
-    if (!c) {
-      el.innerHTML = '';
-      return;
-    }
-    el.innerHTML = `ID: <span class="mono">${c.id}</span><br/>RA: <span class="mono">${fmt(c.ra,5)}</span> Dec: <span class="mono">${fmt(c.dec,5)}</span><br/>Score: <span class="mono">${fmt(c.anomaly_score,4)}</span>`;
-  }
-
-  async function renderCutouts(payload) {
-    const box = document.getElementById('cutouts');
-    box.innerHTML = '';
-    if (!payload || !payload.cutouts || payload.cutouts.length === 0) {
-      box.innerHTML = '<div class="muted small">Aucun cutout disponible.</div>';
-      return;
-    }
-    for (const c of payload.cutouts) {
-      const col = document.createElement('div');
-      col.className = 'col-6';
-      col.innerHTML = `
-        <div class="small muted mb-1">${c.survey}</div>
-        <img class="cutout-img" alt="${c.survey}" src="${c.png}" />
-      `;
-      box.appendChild(col);
-    }
-  }
-
-  async function renderChaos(candidateId) {
-    const chaosBox = document.getElementById('chaosBox');
-    const chaosJson = document.getElementById('chaosJson');
-    if (!state.chaosEnabled || !candidateId) {
-      chaosBox.style.display = 'none';
-      chaosJson.textContent = '{}';
-      return;
-    }
-    try {
-      const r = await fetch(`/chaos?candidate_id=${encodeURIComponent(candidateId)}`);
-      const j = await r.json();
-      chaosJson.textContent = JSON.stringify(j, null, 2);
-      chaosBox.style.display = 'block';
-    } catch (e) {
-      chaosBox.style.display = 'none';
-      chaosJson.textContent = '{}';
-    }
-  }
-
-  async function selectCandidate(c) {
-    state.selected = c;
-    setSelectedMeta(c);
-
-    // Highlight row in the Top table
-    document.querySelectorAll('tr.clickable-row').forEach((tr) => {
-      const id = tr.getAttribute('data-id');
-      tr.classList.toggle('table-active', id === String(c.id));
-    });
-
-    // Fetch cutouts
-    try {
-      const url = `/api/cutouts?ra=${encodeURIComponent(c.ra)}&dec=${encodeURIComponent(c.dec)}`;
-      const r = await fetch(url);
-      const payload = await r.json();
-      await renderCutouts(payload);
-    } catch (e) {
-      await renderCutouts(null);
+      return await r.json();
     }
 
-    await renderChaos(String(c.id));
-  }
+    function setStatus(el, msg) { el.textContent = msg || ""; }
 
-  function wireTopTable() {
-    document.querySelectorAll('tr.clickable-row').forEach((tr) => {
-      tr.addEventListener('click', async () => {
-        const c = {
-          id: tr.getAttribute('data-id'),
-          ra: Number(tr.getAttribute('data-ra')),
-          dec: Number(tr.getAttribute('data-dec')),
-          anomaly_score: Number(tr.getAttribute('data-score')),
+    async function loadViz() {
+      const mode = document.getElementById("vizMode").value;
+      const status = document.getElementById("plotStatus");
+      setStatus(status, "Chargement…");
+
+      try {
+        const fig = await fetchJSON(`/viz3d?mode=${encodeURIComponent(mode)}&max_points=2000`);
+        Plotly.newPlot("plot", fig.data, fig.layout, {responsive:true, displayModeBar:false});
+        setStatus(status, "OK");
+      } catch (e) {
+        const xs = initialTop.map(c => c.ra);
+        const ys = initialTop.map(c => c.dec);
+        const zs = initialTop.map(c => c.anomaly_score);
+        const ids = initialTop.map(c => c.id);
+
+        const trace = {type: "scatter3d", mode: "markers", x: xs, y: ys, z: zs, text: ids};
+        const layout = {
+          title: {text: "Fallback (top candidats)"},
+          scene: {xaxis:{title:"RA"}, yaxis:{title:"Dec"}, zaxis:{title:"Score"}},
+          paper_bgcolor: "rgba(0,0,0,0)",
+          plot_bgcolor: "rgba(0,0,0,0)",
+          font: {color: "#e7ecff"},
         };
-        await selectCandidate(c);
+        Plotly.newPlot("plot", [trace], layout, {responsive:true, displayModeBar:false});
+        setStatus(status, `Viz3D indisponible, fallback. Détail: ${String(e).slice(0, 140)}…`);
+      }
+
+      const plot = document.getElementById("plot");
+      plot.on("plotly_click", (ev) => {
+        const pt = ev?.points?.[0];
+        if (!pt) return;
+        selectCandidate({id: pt.text || "candidate", ra: pt.x, dec: pt.y});
       });
-    });
-  }
-
-  function renderRunResult(resp) {
-    const box = document.getElementById('runResult');
-    const meta = document.getElementById('runMeta');
-    const tbody = document.querySelector('#runTable tbody');
-    tbody.innerHTML = '';
-
-    meta.textContent = resp && resp.meta ? JSON.stringify(resp.meta) : '';
-
-    const rows = (resp && resp.batch) ? resp.batch : [];
-    for (const r of rows) {
-      const tr = document.createElement('tr');
-      tr.className = 'clickable-row';
-      tr.innerHTML = `
-        <td class="mono">${r.id}</td>
-        <td class="text-end mono">${fmt(r.anomaly_score,4)}</td>
-        <td class="text-end mono">${fmt(r.ra,5)}</td>
-        <td class="text-end mono">${fmt(r.dec,5)}</td>
-      `;
-      tr.addEventListener('click', async () => {
-        await selectCandidate({id: r.id, ra: r.ra, dec: r.dec, anomaly_score: r.anomaly_score});
-      });
-      tbody.appendChild(tr);
     }
 
-    box.style.display = 'block';
-  }
+    async function loadCutouts(ra, dec, chaos=false) {
+      const grid = document.getElementById("cutoutsGrid");
+      grid.innerHTML = "";
+      const meta = document.getElementById("cutoutMeta");
+      meta.textContent = `RA=${fmt(ra,5)} Dec=${fmt(dec,5)} | Chargement…`;
 
-  async function wireRunForm() {
-    const form = document.getElementById('runForm');
-    form.addEventListener('submit', async (ev) => {
+      try {
+        const url = `/api/cutouts?ra=${encodeURIComponent(ra)}&dec=${encodeURIComponent(dec)}&mode=${chaos ? "chaos" : "standard"}`;
+        const data = await fetchJSON(url);
+
+        meta.textContent = `RA=${fmt(ra,5)} Dec=${fmt(dec,5)} | ${data.cutouts?.length ?? 0} cutouts`;
+        for (const c of (data.cutouts || [])) {
+          const col = document.createElement("div");
+          col.className = "col-6";
+          col.innerHTML = `
+            <div class="small ao-muted mb-1 text-truncate">${c.survey || "cutout"}</div>
+            <img class="cutout-img" alt="${c.survey || "cutout"}" src="data:image/png;base64,${c.png_b64}" />
+          `;
+          grid.appendChild(col);
+        }
+        if (!data.cutouts || data.cutouts.length === 0) {
+          grid.innerHTML = `<div class="col-12 ao-muted small">Aucun cutout retourné.</div>`;
+        }
+      } catch (e) {
+        meta.textContent = `Erreur cutouts: ${String(e).slice(0, 160)}…`;
+        grid.innerHTML = `<div class="col-12 ao-muted small">Impossible de charger les cutouts.</div>`;
+      }
+    }
+
+    function selectCandidate(c) {
+      const chaos = document.getElementById("modeChaos").checked;
+      loadCutouts(c.ra, c.dec, chaos);
+    }
+
+    function wireTableClicks() {
+      const rows = document.querySelectorAll("#candidatesTable tr.candidate-row");
+      for (const r of rows) {
+        r.addEventListener("click", () => {
+          const ra = parseFloat(r.dataset.ra);
+          const dec = parseFloat(r.dataset.dec);
+          selectCandidate({id: r.dataset.cid, ra, dec});
+        });
+      }
+    }
+
+    async function onRunSubmit(ev) {
       ev.preventDefault();
+      const status = document.getElementById("runStatus");
+      const out = document.getElementById("runOutput");
+      const btn = document.getElementById("runBtn");
+
+      setStatus(status, "Exécution…");
+      out.textContent = "";
+      btn.disabled = true;
+
+      const form = document.getElementById("runForm");
       const fd = new FormData(form);
-      // Drop empty ra/dec to avoid server parsing issues
-      if (!String(fd.get('ra') || '').trim()) fd.delete('ra');
-      if (!String(fd.get('dec') || '').trim()) fd.delete('dec');
+      fd.append("mode", document.getElementById("modeChaos").checked ? "chaos" : "standard");
 
-      const r = await fetch('/run', {method: 'POST', body: fd});
-      const j = await r.json();
-      renderRunResult(j);
-    });
-  }
+      try {
+        const data = await fetchJSON("/run", {method:"POST", body: fd});
+        out.textContent = JSON.stringify(data, null, 2);
+        setStatus(status, "OK");
+      } catch (e) {
+        setStatus(status, `Erreur: ${String(e).slice(0, 220)}…`);
+      } finally {
+        btn.disabled = false;
+      }
+    }
 
-  document.getElementById('btnScatter').addEventListener('click', () => loadPlot('scatter'));
-  document.getElementById('btnGlobe').addEventListener('click', () => loadPlot('globe'));
-  document.getElementById('btnReload').addEventListener('click', () => loadPlot(state.mode));
+    document.getElementById("reloadViz").addEventListener("click", loadViz);
+    document.getElementById("runForm").addEventListener("submit", onRunSubmit);
+    wireTableClicks();
+    loadViz();
+  </script>
 
-  document.getElementById('toggleChaos').addEventListener('change', async (ev) => {
-    state.chaosEnabled = Boolean(ev.target.checked);
-    await renderChaos(state.selected ? String(state.selected.id) : null);
-  });
-
-  (async () => {
-    wireTopTable();
-    await wireRunForm();
-    await loadPlot('scatter');
-  })();
-</script>
 </body>
 </html>
