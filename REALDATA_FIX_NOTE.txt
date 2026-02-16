@@ -1,0 +1,11 @@
+Corrections CI Real Data
+
+1) Fix OverflowError sur les opérations bitwise en pseudo-RA/Dec.
+   Toutes les opérations se font en uint64 via numpy.
+
+2) Mode Gaia tolérant aux pannes du service (HTTP 500).
+   Si la requête Gaia échoue, fallback pseudo coords et le workflow continue.
+
+Important:
+Les workflows 'real-offline' et 'real-gaia' vus dans les logs sont des anciens YAML.
+Supprime-les dans .github/workflows (garde uniquement ceux listés dans WORKFLOWS_KEEP.md).
