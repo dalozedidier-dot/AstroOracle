@@ -123,9 +123,7 @@ def _gaia_coords_for_source_ids(source_ids: list[int], max_rows: int) -> pd.Data
         part = source_ids[i : i + chunk]
         ids = ",".join(str(int(x)) for x in part)
         adql = (
-            "SELECT source_id, ra, dec "
-            "FROM gaiadr3.gaia_source "
-            f"WHERE source_id IN ({ids})"
+            "SELECT source_id, ra, dec " "FROM gaiadr3.gaia_source " f"WHERE source_id IN ({ids})"
         )
         job = Gaia.launch_job_async(adql)
         tab = job.get_results().to_pandas()
@@ -135,7 +133,9 @@ def _gaia_coords_for_source_ids(source_ids: list[int], max_rows: int) -> pd.Data
     return pd.concat(out_frames, ignore_index=True)
 
 
-def build_candidates(input_path: Path, kind: str, mode: str, limit: int, gaia_max_rows: int) -> BuildResult:
+def build_candidates(
+    input_path: Path, kind: str, mode: str, limit: int, gaia_max_rows: int
+) -> BuildResult:
     df0 = _read_table(input_path)
     n_in = len(df0)
     if limit > 0:
@@ -178,7 +178,11 @@ def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--input", required=True)
     p.add_argument("--out", required=True)
-    p.add_argument("--kind", required=True, choices=["galaxy_candidates", "vari_summary", "galaxy_catalogue_name"])
+    p.add_argument(
+        "--kind",
+        required=True,
+        choices=["galaxy_candidates", "vari_summary", "galaxy_catalogue_name"],
+    )
     p.add_argument("--mode", default="pseudo", choices=["pseudo", "gaia"])
     p.add_argument("--limit", type=int, default=20000)
     p.add_argument("--gaia-max-rows", type=int, default=2000)

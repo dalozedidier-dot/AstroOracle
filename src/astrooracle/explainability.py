@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 
 
-
 @dataclass(frozen=True)
 class Explanation:
     candidate_id: str
@@ -17,7 +16,6 @@ class Explanation:
     top_features: List[Tuple[str, float]]
     prompt: str
     meta: Dict[str, Any]
-
 
 
 def _robust_z(x: np.ndarray, eps: float = 1e-12) -> np.ndarray:
@@ -53,7 +51,6 @@ def _collect_numeric_features(df: pd.DataFrame) -> List[str]:
     ]
     rest = [c for c in cols if c not in priors]
     return priors + rest
-
 
 
 def explain_candidate_zscores(
@@ -106,8 +103,6 @@ def explain_candidate_zscores(
     )
 
 
-
-
 def build_llm_prompt(
     *,
     row: pd.Series,
@@ -127,17 +122,20 @@ def build_llm_prompt(
     lines.append(f"Candidat: id={row.get('id')} RA={ra:.5f} deg Dec={dec:.5f} deg")
     lines.append(f"Scores: anomaly_score={anom:.4f} rank_score={score:.4f}")
     lines.append("")
-    lines.append("Signaux numériques (z-scores robustes, valeurs positives = au-dessus de la médiane):")
+    lines.append(
+        "Signaux numériques (z-scores robustes, valeurs positives = au-dessus de la médiane):"
+    )
     for name, z in top_features:
         lines.append(f"- {name}: {z:+.3f}")
     lines.append("")
     lines.append("Tâche:")
     lines.append("1) Propose une hypothèse scientifique plausible.")
-    lines.append("2) Liste les 3 tests ou vérifications (catalogues, crossmatch, inspection cutouts).")
+    lines.append(
+        "2) Liste les 3 tests ou vérifications (catalogues, crossmatch, inspection cutouts)."
+    )
     lines.append("3) Dis si c'est probablement: artefact, connu, nouveau type, ou réel.")
 
     return "\n".join(lines)
-
 
 
 def explain_top_n(

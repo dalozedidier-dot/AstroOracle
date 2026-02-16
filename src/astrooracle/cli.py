@@ -33,7 +33,11 @@ def _make_cfg(args: argparse.Namespace) -> OracleConfig:
     cfg0 = OracleConfig.default()
 
     save_dir = Path(args.save_cutouts) if args.save_cutouts else None
-    cutout_radius = cfg0.cutout_radius_arcmin if args.cutout_radius_arcmin is None else float(args.cutout_radius_arcmin)
+    cutout_radius = (
+        cfg0.cutout_radius_arcmin
+        if args.cutout_radius_arcmin is None
+        else float(args.cutout_radius_arcmin)
+    )
 
     ranking = RankingConfig(
         strategy=str(args.acq),
@@ -64,7 +68,9 @@ def _make_cfg(args: argparse.Namespace) -> OracleConfig:
     )
 
 
-def maybe_retrain(cfg: OracleConfig, *, session_id: str | None = None, annotator_id: str | None = None) -> None:
+def maybe_retrain(
+    cfg: OracleConfig, *, session_id: str | None = None, annotator_id: str | None = None
+) -> None:
     total = count_labels(cfg)
     cursor = get_retrain_cursor(cfg)
     new_since = total - cursor
@@ -83,7 +89,9 @@ def maybe_retrain(cfg: OracleConfig, *, session_id: str | None = None, annotator
     try:
         subprocess.run(["python", str(cfg.retrain_script)], check=True)
         set_retrain_cursor(cfg, total)
-        log_event(cfg, {"event": "retrain_success"}, session_id=session_id, annotator_id=annotator_id)
+        log_event(
+            cfg, {"event": "retrain_success"}, session_id=session_id, annotator_id=annotator_id
+        )
     except Exception as e:
         log_event(
             cfg,
@@ -194,8 +202,15 @@ def cmd_run(args: argparse.Namespace) -> None:
     session_id = args.session_id
     annotator_id = args.annotator_id
 
-    log_event(cfg, {"event": "oracle_started", "mode": "poll"}, session_id=session_id, annotator_id=annotator_id)
-    print(f"AstroOracle running.\ncandidates={cfg.candidates_path} interval={cfg.check_interval_s}s")
+    log_event(
+        cfg,
+        {"event": "oracle_started", "mode": "poll"},
+        session_id=session_id,
+        annotator_id=annotator_id,
+    )
+    print(
+        f"AstroOracle running.\ncandidates={cfg.candidates_path} interval={cfg.check_interval_s}s"
+    )
 
     while True:
         try:
@@ -205,11 +220,18 @@ def cmd_run(args: argparse.Namespace) -> None:
                 if not top.empty:
                     annotate_batch(cfg, top, session_id=session_id, annotator_id=annotator_id)
         except KeyboardInterrupt:
-            log_event(cfg, {"event": "oracle_stopped"}, session_id=session_id, annotator_id=annotator_id)
+            log_event(
+                cfg, {"event": "oracle_stopped"}, session_id=session_id, annotator_id=annotator_id
+            )
             print("Stopped.")
             break
         except Exception as e:
-            log_event(cfg, {"event": "error", "msg": str(e)}, session_id=session_id, annotator_id=annotator_id)
+            log_event(
+                cfg,
+                {"event": "error", "msg": str(e)},
+                session_id=session_id,
+                annotator_id=annotator_id,
+            )
             print(f"Error: {e}")
 
         time.sleep(cfg.check_interval_s)
@@ -220,7 +242,12 @@ def cmd_watch(args: argparse.Namespace) -> None:
     session_id = args.session_id
     annotator_id = args.annotator_id
 
-    log_event(cfg, {"event": "oracle_started", "mode": "watch"}, session_id=session_id, annotator_id=annotator_id)
+    log_event(
+        cfg,
+        {"event": "oracle_started", "mode": "watch"},
+        session_id=session_id,
+        annotator_id=annotator_id,
+    )
     print(f"AstroOracle watching {cfg.candidates_path}")
 
     def _on_change() -> None:
@@ -231,7 +258,12 @@ def cmd_watch(args: argparse.Namespace) -> None:
                 if not top.empty:
                     annotate_batch(cfg, top, session_id=session_id, annotator_id=annotator_id)
         except Exception as e:
-            log_event(cfg, {"event": "error", "msg": str(e)}, session_id=session_id, annotator_id=annotator_id)
+            log_event(
+                cfg,
+                {"event": "error", "msg": str(e)},
+                session_id=session_id,
+                annotator_id=annotator_id,
+            )
             print(f"Error: {e}")
 
     watch_candidates(cfg.candidates_path, _on_change)
@@ -274,7 +306,13 @@ def cmd_batch_html(args: argparse.Namespace) -> None:
 def cmd_train(args: argparse.Namespace) -> None:
     cfg = _make_cfg(args)
     metrics = train_from_files(cfg)
-    log_event(cfg, {"event": "train", "metrics": {"ece": metrics.get("ece"), "n_train": metrics.get("n_train")}})
+    log_event(
+        cfg,
+        {
+            "event": "train",
+            "metrics": {"ece": metrics.get("ece"), "n_train": metrics.get("n_train")},
+        },
+    )
     print(json.dumps(metrics, indent=2, ensure_ascii=False))
 
 
@@ -357,7 +395,9 @@ def cmd_explain_top(args: argparse.Namespace) -> None:
     expl = explain_top_n(ranked, n=int(args.n))
     write_explanations_jsonl(expl, Path(args.output))
 
-    log_event(cfg, {"event": "explain_top", "n": int(args.n), "out": str(args.output), "meta": meta})
+    log_event(
+        cfg, {"event": "explain_top", "n": int(args.n), "out": str(args.output), "meta": meta}
+    )
     print(f"explanations written: {args.output}")
 
 
@@ -434,7 +474,9 @@ def main() -> None:
         sp.add_argument("--survey", action="append", default=["DSS2 Red", "2MASS J"])
         sp.add_argument("--no-gui", action="store_true")
         sp.add_argument("--save-cutouts", default=None)
-        sp.add_argument("--offline", action="store_true", help="Use synthetic cutouts (no network).")
+        sp.add_argument(
+            "--offline", action="store_true", help="Use synthetic cutouts (no network)."
+        )
         sp.add_argument("--session-id", default=None)
         sp.add_argument("--annotator-id", default=None)
         sp.add_argument("--acq", default="entropy", choices=["entropy", "margin", "bald", "badge"])
@@ -444,7 +486,9 @@ def main() -> None:
         sp.add_argument("--w-div", type=float, default=0.20)
         sp.add_argument("--w-prior", type=float, default=0.10)
         sp.add_argument("--acq-temp", type=float, default=1.0)
-        sp.add_argument("--mode", default="vanilla", choices=["vanilla", "hybrid"], help="Optional scoring mode")
+        sp.add_argument(
+            "--mode", default="vanilla", choices=["vanilla", "hybrid"], help="Optional scoring mode"
+        )
 
     sp_run = sub.add_parser("run", help="Poll candidates file and annotate in CLI.")
     add_common(sp_run)
@@ -471,12 +515,22 @@ def main() -> None:
     sp_viz.add_argument("--input", default="candidates.parquet")
     sp_viz.add_argument("--output", default="viz3d.html")
     sp_viz.add_argument("--mode", default="scatter", choices=["scatter", "globe"])
-    sp_viz.add_argument("--color", default=None, help="Column name to color by (e.g. label_pred, uncertainty).")
+    sp_viz.add_argument(
+        "--color", default=None, help="Column name to color by (e.g. label_pred, uncertainty)."
+    )
     sp_viz.add_argument("--max-points", type=int, default=5000)
-    sp_viz.add_argument("--cutouts-dir", default=None, help="Folder containing cutout PNGs (e.g. batch_out/cutouts).")
+    sp_viz.add_argument(
+        "--cutouts-dir",
+        default=None,
+        help="Folder containing cutout PNGs (e.g. batch_out/cutouts).",
+    )
     sp_viz.add_argument("--cutout-survey", default="DSS2 Red")
-    sp_viz.add_argument("--embed-cutouts", action="store_true", help="Embed cutouts as base64 in hover.")
-    sp_viz.add_argument("--cdn", action="store_true", help="Use Plotly CDN instead of embedding JS.")
+    sp_viz.add_argument(
+        "--embed-cutouts", action="store_true", help="Embed cutouts as base64 in hover."
+    )
+    sp_viz.add_argument(
+        "--cdn", action="store_true", help="Use Plotly CDN instead of embedding JS."
+    )
     sp_viz.add_argument("--title", default=None)
     sp_viz.set_defaults(fn=cmd_viz3d)
 
@@ -486,14 +540,18 @@ def main() -> None:
     sp_serve.add_argument("--port", type=int, default=8000)
     sp_serve.set_defaults(fn=cmd_serve)
 
-    sp_g = sub.add_parser("graph-anomaly", help="Graph kNN anomaly context on the celestial sphere (HTML).")
+    sp_g = sub.add_parser(
+        "graph-anomaly", help="Graph kNN anomaly context on the celestial sphere (HTML)."
+    )
     sp_g.add_argument("--input", default="candidates.parquet")
     sp_g.add_argument("--output", default="graph_anomaly.html")
     sp_g.add_argument("--k", type=int, default=10)
     sp_g.add_argument("--max-nodes", type=int, default=2000)
     sp_g.set_defaults(fn=cmd_graph_anomaly)
 
-    sp_e = sub.add_parser("explain-top", help="Generate shareable explanations JSONL for the top ranked candidates.")
+    sp_e = sub.add_parser(
+        "explain-top", help="Generate shareable explanations JSONL for the top ranked candidates."
+    )
     add_common(sp_e)
     sp_e.add_argument("--n", type=int, default=10)
     sp_e.add_argument("--output", default="explanations.jsonl")
@@ -507,13 +565,17 @@ def main() -> None:
     sp_gc.add_argument("--output", default="gaia_cone.parquet")
     sp_gc.set_defaults(fn=cmd_gaia_cone)
 
-    sp_ga = sub.add_parser("gaia-adql", help="Run an ADQL SELECT query against Gaia via astroquery.")
+    sp_ga = sub.add_parser(
+        "gaia-adql", help="Run an ADQL SELECT query against Gaia via astroquery."
+    )
     sp_ga.add_argument("--adql", type=str, required=True)
     sp_ga.add_argument("--max-rows", type=int, default=20000)
     sp_ga.add_argument("--output", default="gaia_query.parquet")
     sp_ga.set_defaults(fn=cmd_gaia_adql)
 
-    sp_c = sub.add_parser("chaos-score", help="Compute chaos-style metrics for a time series column.")
+    sp_c = sub.add_parser(
+        "chaos-score", help="Compute chaos-style metrics for a time series column."
+    )
     sp_c.add_argument("--input", default="candidates.parquet")
     sp_c.add_argument("--series-col", default="timeseries")
     sp_c.add_argument("--emb-dim", type=int, default=3)

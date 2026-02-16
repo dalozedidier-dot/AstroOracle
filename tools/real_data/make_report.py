@@ -8,7 +8,11 @@ import subprocess
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--input", required=True, help="Path to an ECSV/CSV(.gz) file.")
-    p.add_argument("--kind", required=True, choices=["galaxy_candidates", "vari_summary", "galaxy_catalogue_name"])
+    p.add_argument(
+        "--kind",
+        required=True,
+        choices=["galaxy_candidates", "vari_summary", "galaxy_catalogue_name"],
+    )
     p.add_argument("--out-dir", required=True, help="Output folder for batch HTML.")
     p.add_argument("--mode", default="pseudo", choices=["pseudo", "gaia"])
     p.add_argument("--limit", type=int, default=20000)

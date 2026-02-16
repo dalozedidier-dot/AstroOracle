@@ -91,7 +91,9 @@ def lyapunov_proxy(series: np.ndarray, *, emb_dim: int = 3, emb_lag: int = 1) ->
     return float(np.mean(np.log(ratio)))
 
 
-def rqa_light(series: np.ndarray, *, emb_dim: int = 3, emb_lag: int = 1, eps_quantile: float = 0.10) -> Tuple[float, float, float]:
+def rqa_light(
+    series: np.ndarray, *, emb_dim: int = 3, emb_lag: int = 1, eps_quantile: float = 0.10
+) -> Tuple[float, float, float]:
     """Very small RQA-like summary: (RR, DET, ENT).
 
     - RR: recurrence rate
@@ -185,7 +187,9 @@ def compute_chaos_metrics(
     rr_sig = float(np.clip(rr / 0.10, 0.0, 1.0))  # normalize around 10% recurrence.
     ent_sig = float(np.clip(ent / 2.0, 0.0, 1.0))
 
-    score = float(np.clip(0.45 * lyap_sig + 0.25 * det_sig + 0.15 * ent_sig + 0.15 * rr_sig, 0.0, 1.0))
+    score = float(
+        np.clip(0.45 * lyap_sig + 0.25 * det_sig + 0.15 * ent_sig + 0.15 * rr_sig, 0.0, 1.0)
+    )
 
     return ChaosMetrics(
         lyapunov_proxy=float(lyap),

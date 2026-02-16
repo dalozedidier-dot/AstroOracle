@@ -14,8 +14,6 @@ except Exception:  # pragma: no cover
     nx = None  # type: ignore
 
 
-
-
 @dataclass(frozen=True)
 class GraphAnomalyResult:
     n_nodes: int
@@ -24,7 +22,6 @@ class GraphAnomalyResult:
     node_metrics: pd.DataFrame
     edge_bridges: pd.DataFrame
     meta: Dict[str, float]
-
 
 
 def _radec_to_xyz(ra_deg: np.ndarray, dec_deg: np.ndarray) -> np.ndarray:
@@ -40,7 +37,6 @@ def _great_circle_distance_rad(xyz_a: np.ndarray, xyz_b: np.ndarray) -> np.ndarr
     # angle between unit vectors.
     dot = np.clip((xyz_a * xyz_b).sum(axis=1), -1.0, 1.0)
     return np.arccos(dot)
-
 
 
 def build_knn_graph(
@@ -119,8 +115,6 @@ def build_knn_graph(
     return G, d
 
 
-
-
 def detect_communities(G: "nx.Graph") -> Dict[str, int]:
     """Community assignment (Louvain if available, else greedy modularity)."""
 
@@ -139,18 +133,12 @@ def detect_communities(G: "nx.Graph") -> Dict[str, int]:
         pass
 
     # Greedy modularity (networkx)
-    comms = list(
-        nx.algorithms.community.greedy_modularity_communities(
-            G, weight="weight"
-        )
-    )
+    comms = list(nx.algorithms.community.greedy_modularity_communities(G, weight="weight"))
     out: Dict[str, int] = {}
     for i, cset in enumerate(comms):
         for node in cset:
             out[str(node)] = int(i)
     return out
-
-
 
 
 def graph_anomaly(
@@ -234,8 +222,6 @@ def graph_anomaly(
     )
 
 
-
-
 def plot_graph_context(
     df: pd.DataFrame,
     *,
@@ -272,9 +258,9 @@ def plot_graph_context(
         d,
         x="ra",
         y="dec",
-        color='community',
-        size='_node_size',
-        hover_data=['id', 'anomaly_score', 'community', 'betweenness'],
+        color="community",
+        size="_node_size",
+        hover_data=["id", "anomaly_score", "community", "betweenness"],
         title=title,
     )
 

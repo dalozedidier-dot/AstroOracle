@@ -9,7 +9,6 @@ from __future__ import annotations
 import importlib
 from typing import Optional, Sequence, cast, Callable, Any
 
-
 _MainFn = Callable[[Optional[Sequence[str]]], int]
 
 

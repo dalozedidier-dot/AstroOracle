@@ -9,13 +9,11 @@ import pandas as pd
 from .ml.features import build_feature_matrix
 
 
-
 @dataclass(frozen=True)
 class HybridFusionResult:
     fused_score: np.ndarray
     components: Dict[str, np.ndarray]
     meta: Dict[str, float]
-
 
 
 def _normalize01(x: np.ndarray, eps: float = 1e-12) -> np.ndarray:
@@ -25,7 +23,6 @@ def _normalize01(x: np.ndarray, eps: float = 1e-12) -> np.ndarray:
     if not np.isfinite(lo) or not np.isfinite(hi) or hi - lo < eps:
         return np.zeros_like(x)
     return (x - lo) / (hi - lo + eps)
-
 
 
 def compute_hybrid_fused_scores(
@@ -114,8 +111,6 @@ def compute_hybrid_fused_scores(
             "seed": float(seed),
         },
     )
-
-
 
 
 def apply_hybrid_mode(

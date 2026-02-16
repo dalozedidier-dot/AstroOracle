@@ -24,5 +24,7 @@ def test_apply_hybrid_mode_overwrites_anomaly_score():
 
     out, meta = apply_hybrid_mode(df, overwrite_anomaly_score=True)
     assert "hybrid_fused_score" in out.columns
-    assert not np.allclose(out["anomaly_score"].to_numpy(float), df["anomaly_score"].to_numpy(float))
+    assert not np.allclose(
+        out["anomaly_score"].to_numpy(float), df["anomaly_score"].to_numpy(float)
+    )
     assert "hybrid_w_base" in meta

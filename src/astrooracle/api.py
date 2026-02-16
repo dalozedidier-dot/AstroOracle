@@ -162,9 +162,7 @@ def create_app(cfg: Optional[OracleConfig] = None) -> FastAPI:
         _ = str(mode)
 
         cutouts = fetch_cutouts(float(ra), float(dec), cfg)
-        out = [
-            {"survey": survey, "png_b64": _array_to_png_b64(arr)} for (survey, arr) in cutouts
-        ]
+        out = [{"survey": survey, "png_b64": _array_to_png_b64(arr)} for (survey, arr) in cutouts]
         return {"ra": float(ra), "dec": float(dec), "cutouts": out}
 
     @app.post("/run")
@@ -265,10 +263,10 @@ def create_app(cfg: Optional[OracleConfig] = None) -> FastAPI:
         max_points: int = 5000,
         color: Optional[str] = None,
     ) -> Dict[str, Any]:
-        '''Return a Plotly figure JSON for interactive 3D triage.
+        """Return a Plotly figure JSON for interactive 3D triage.
 
         This endpoint is optional: it requires the `plotly` extra.
-        '''
+        """
         try:
             from .viz3d import build_viz3d_figure, load_candidates_table
         except Exception as e:  # pragma: no cover
@@ -288,6 +286,7 @@ def create_app(cfg: Optional[OracleConfig] = None) -> FastAPI:
         return json.loads(fig.to_json())
 
     return app
+
 
 # Backwards-compatible ASGI app (used by tests and by `uvicorn astrooracle.api:app`).
 app = create_app()

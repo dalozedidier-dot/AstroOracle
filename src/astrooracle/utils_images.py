@@ -8,7 +8,9 @@ import numpy as np
 from PIL import Image
 
 
-def normalize_to_uint8(img2d: np.ndarray, *, p_low: float = 1.0, p_high: float = 99.0) -> np.ndarray:
+def normalize_to_uint8(
+    img2d: np.ndarray, *, p_low: float = 1.0, p_high: float = 99.0
+) -> np.ndarray:
     """Normalize a 2D float array to uint8 using robust percentiles."""
 
     arr = np.asarray(img2d, dtype=float)
