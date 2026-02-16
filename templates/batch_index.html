@@ -2,376 +2,870 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AstroOracle batch | Rapport</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AstroOracle batch - Rapport</title>
   <style>
-    body { background: #0b1020; color: #e7ecff; }
-    a { color: #9ec5ff; }
-    .card { background: #111a33; border: 1px solid rgba(255,255,255,0.10); }
-    .muted { color: rgba(231,236,255,0.70); }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    .table { color: #e7ecff; }
-    .table thead th { color: rgba(231,236,255,0.85); border-color: rgba(255,255,255,0.10); }
-    .table td { border-color: rgba(255,255,255,0.08); }
-    .cutout-img { width: 100%; height: auto; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); }
-    .clickable-row { cursor: pointer; }
-    #plot { min-height: 360px; }
+    :root{
+      --bg:#0b1020;
+      --card:rgba(17,26,51,0.72);
+      --border:rgba(255,255,255,0.10);
+      --text:#e7ecff;
+      --muted:#aab3d6;
+      --accent:#4a6cff;
+      --accent2:#92a3ff;
+    }
+    html,body{height:100%;}
+    body{
+      margin:0;
+      background: radial-gradient(1200px 800px at 15% 10%, #192a57 0%, var(--bg) 60%);
+      color:var(--text);
+      font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    }
+    a{color:var(--accent2);text-decoration:none;}
+    a:hover{text-decoration:underline;}
+    .wrap{display:flex;min-height:100vh;}
+    .sidebar{
+      width:280px;
+      padding:16px 14px;
+      border-right:1px solid var(--border);
+      background: rgba(0,0,0,0.18);
+      box-sizing:border-box;
+    }
+    .content{
+      flex:1;
+      padding:18px;
+      box-sizing:border-box;
+    }
+    .brand{display:flex;gap:10px;align-items:center;margin-bottom:12px;}
+    .logo{
+      width:44px;height:44px;border-radius:14px;
+      background: var(--card);
+      border:1px solid var(--border);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .h1{font-size:18px;font-weight:700;margin:0;}
+    .sub{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.35;}
+    .pill{
+      display:inline-block;
+      font-size:12px;
+      color:var(--muted);
+      border:1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      padding:4px 8px;border-radius:999px;margin-right:6px;margin-top:6px;
+    }
+    .nav{margin-top:14px;}
+    .nav button{
+      width:100%;
+      text-align:left;
+      padding:10px 10px;
+      border:1px solid transparent;
+      border-radius:12px;
+      background: transparent;
+      color: var(--text);
+      cursor:pointer;
+      margin-bottom:6px;
+    }
+    .nav button:hover{background: rgba(255,255,255,0.05);}
+    .nav button.active{
+      background: rgba(74,108,255,0.18);
+      border:1px solid rgba(74,108,255,0.25);
+    }
+
+    .card{
+      background: var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:14px;
+      margin-bottom:14px;
+    }
+    .row{display:flex;gap:14px;flex-wrap:wrap;}
+    .col{flex:1;min-width:260px;}
+    .kpi{
+      display:flex;flex-direction:column;gap:4px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:10px;
+      background: rgba(0,0,0,0.12);
+    }
+    .kpi .v{font-size:20px;font-weight:700;}
+    .kpi .k{font-size:12px;color:var(--muted);}
+    .toolbar{
+      display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+      margin-top:10px;
+    }
+    .btn{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      padding:8px 10px;
+      border-radius:12px;
+      cursor:pointer;
+      font-size:13px;
+    }
+    .btn.primary{
+      background: var(--accent);
+      border-color: rgba(74,108,255,0.40);
+    }
+    .btn:hover{filter:brightness(1.05);}
+    .muted{color:var(--muted);font-size:12px;line-height:1.35;}
+
+    .grid2{display:grid;grid-template-columns: 1fr 1fr;gap:10px;}
+    .grid3{display:grid;grid-template-columns: 1fr 1fr 1fr;gap:10px;}
+    .img{
+      width:100%;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,0.20);
+    }
+
+    .tableWrap{overflow:auto;border:1px solid var(--border);border-radius:14px;}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    th,td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.06);white-space:nowrap;}
+    th{position:sticky;top:0;background: rgba(0,0,0,0.22);text-align:left;font-size:12px;color:var(--muted);}
+    tr:hover{background: rgba(255,255,255,0.04);}
+    tr.sel{background: rgba(74,108,255,0.14);}
+    input,select,textarea{
+      width:100%;
+      box-sizing:border-box;
+      padding:8px 10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      font-size:13px;
+    }
+    textarea{min-height:86px;resize:vertical;}
+    .split{display:flex;gap:14px;flex-wrap:wrap;}
+    .split .left{flex:1;min-width:420px;}
+    .split .right{width:360px;max-width:100%;}
+    pre{
+      margin:0;
+      padding:10px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,0.16);
+      overflow:auto;
+      font-size:12px;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .fileList{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+    .fileItem{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:8px 10px;border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,0.12);
+      cursor:pointer;
+    }
+    .fileItem:hover{background: rgba(255,255,255,0.05);}
+    .tag{font-size:11px;color:var(--muted);border:1px solid rgba(255,255,255,0.10);padding:2px 6px;border-radius:999px;}
+    .small{font-size:12px;color:var(--muted);}
+    .warn{color:#ffd48a;}
+    .ok{color:#9be7b1;}
   </style>
 </head>
-<body>
-  <nav class="navbar navbar-dark" style="background:#0b1020;border-bottom:1px solid rgba(255,255,255,0.08)">
-    <div class="container py-2">
-      <span class="navbar-brand fw-semibold">AstroOracle batch</span>
-      <div class="ms-auto d-flex gap-2">
-        <button class="btn btn-sm btn-outline-light" id="btnExportJson">Export JSON</button>
-        <button class="btn btn-sm btn-outline-light" id="btnExportCsv">Export CSV</button>
-        <button class="btn btn-sm btn-outline-light" id="btnClear">Clear saved labels</button>
-        <a class="btn btn-sm btn-outline-light" id="linkViz3d" href="viz3d_globe.html" target="_blank" rel="noreferrer">Ouvrir la visualisation 3D</a>
-      </div>
-    </div>
-  </nav>
 
-  <main class="container py-4">
-    <div class="row g-4">
-      <div class="col-lg-7">
-        <div class="card p-3">
-          <div class="d-flex flex-wrap align-items-center justify-content-between">
+<body>
+  <div class="wrap">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2l1.7 6.3L20 10l-6.3 1.7L12 18l-1.7-6.3L4 10l6.3-1.7L12 2z" stroke="rgba(231,236,255,0.9)" stroke-width="1.6"/>
+          </svg>
+        </div>
+        <div>
+          <div class="h1">AstroOracle batch</div>
+          <div class="sub">Navigateur de rapport. Candidats, cutouts, pages HTML, fichiers JSON et CSV.</div>
+        </div>
+      </div>
+
+      <div id="pills">
+        <span class="pill" id="pillCandidates">candidats: -</span>
+        <span class="pill" id="pillCutouts">cutouts: -</span>
+        <span class="pill" id="pillBase">base: -</span>
+      </div>
+
+      <div class="nav" role="navigation" aria-label="Sections">
+        <button class="active" data-tab="overview">Vue d'ensemble</button>
+        <button data-tab="candidates">Candidats</button>
+        <button data-tab="details">Détails</button>
+        <button data-tab="files">Fichiers</button>
+      </div>
+
+      <div class="card" style="margin-top:12px;">
+        <div class="muted">
+          Astuce: si vous ouvrez ce fichier en local et que rien ne charge, servez le dossier avec <code>python -m http.server</code>.
+        </div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section id="tab-overview" class="tab">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;">
             <div>
-              <div class="fw-semibold">Rapport batch</div>
-              <div class="small muted" id="metaLine">Chargement...</div>
+              <div style="font-size:18px;font-weight:700;margin-bottom:4px;">Rapport batch</div>
+              <div class="muted" id="metaLine">Chargement...</div>
             </div>
-            <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-light" id="btnPlot">Recharger plot</button>
+            <div class="toolbar">
+              <a class="btn" id="btnViz3D" href="#" target="_blank" rel="noreferrer">Ouvrir viz3d_globe.html</a>
+              <button class="btn" id="btnExportJSON">Export JSON</button>
+              <button class="btn" id="btnExportCSV">Export CSV</button>
+              <button class="btn" id="btnClear">Clear labels</button>
             </div>
           </div>
-          <div id="plot" class="mt-2"></div>
-          <div class="small muted mt-2">Données: <span class="mono" id="dataPath">candidates.json</span>. Cutouts: <span class="mono" id="cutoutsPath">cutouts/</span>.</div>
+
+          <div class="row" style="margin-top:12px;">
+            <div class="col">
+              <div class="kpi">
+                <div class="v" id="kpiN">-</div>
+                <div class="k">Nombre de candidats</div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="kpi">
+                <div class="v" id="kpiTop">-</div>
+                <div class="k">Meilleur score</div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="kpi">
+                <div class="v" id="kpiSurveys">-</div>
+                <div class="k">Surveys</div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="card p-3 mt-4">
-          <div class="fw-semibold">Candidats</div>
-          <div class="small muted">Cliquez une ligne pour voir les cutouts et annoter.</div>
-          <div class="table-responsive mt-2" style="max-height: 520px;">
-            <table class="table table-sm table-hover align-middle mb-0" id="candTable">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
+            <div>
+              <div style="font-size:15px;font-weight:700;margin-bottom:3px;">Aperçu du ciel</div>
+              <div class="muted">Scatter RA, Dec et histogramme des scores, rendu sans dépendances.</div>
+            </div>
+            <button class="btn" id="btnRefreshPlots">Recharger</button>
+          </div>
+
+          <div class="grid2" style="margin-top:12px;">
+            <div>
+              <canvas id="skyCanvas" class="img" style="height:340px;"></canvas>
+              <div class="small">RA en abscisse. Dec en ordonnée. Les points plus brillants ont un score plus élevé.</div>
+            </div>
+            <div>
+              <canvas id="histCanvas" class="img" style="height:340px;"></canvas>
+              <div class="small">Histogramme des scores (20 bins).</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-candidates" class="tab" style="display:none;">
+        <div class="card">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+            <div style="flex:1;min-width:220px;">
+              <div class="small">Recherche</div>
+              <input id="q" placeholder="id ou label" />
+            </div>
+            <div style="width:160px;">
+              <div class="small">Min score</div>
+              <input id="minScore" type="number" step="0.01" value="0.00" />
+            </div>
+            <div style="width:180px;">
+              <div class="small">Label</div>
+              <select id="labelFilter">
+                <option value="">tous</option>
+                <option value="real_anomaly">real_anomaly</option>
+                <option value="artefact">artefact</option>
+                <option value="known">known</option>
+                <option value="new_type">new_type</option>
+                <option value="unsure">unsure</option>
+              </select>
+            </div>
+            <div style="width:140px;">
+              <div class="small">Par page</div>
+              <select id="pageSize">
+                <option>25</option>
+                <option selected>50</option>
+                <option>100</option>
+                <option>200</option>
+              </select>
+            </div>
+            <button class="btn primary" id="btnApply">Appliquer</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="tableWrap">
+            <table>
               <thead>
                 <tr>
                   <th>ID</th>
-                  <th class="text-end">Score</th>
-                  <th class="text-end">RA</th>
-                  <th class="text-end">Dec</th>
+                  <th>Score</th>
+                  <th>RA</th>
+                  <th>Dec</th>
                   <th>Label</th>
                 </tr>
               </thead>
-              <tbody></tbody>
+              <tbody id="tbl"></tbody>
             </table>
           </div>
-        </div>
-      </div>
 
-      <div class="col-lg-5">
-        <div class="card p-3">
-          <div class="fw-semibold">Détails</div>
-          <div class="small muted">Le stockage se fait en local (localStorage). Exportez ensuite en CSV ou JSON.</div>
-          <div class="mt-2" id="selectedMeta"></div>
-
-          <div class="mt-3">
-            <label class="form-label small muted">Commentaire</label>
-            <textarea id="commentBox" class="form-control form-control-sm" rows="3" placeholder="Optionnel"></textarea>
-          </div>
-
-          <div class="row g-2 mt-3" id="cutouts"></div>
-
-          <div class="mt-3 small muted" id="noteLine">
-            Note: la page viz3d_globe.html peut dépendre de Plotly via CDN selon le mode d'export.
+          <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px;">
+            <div class="muted" id="pageInfo">-</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn" id="prev">Prev</button>
+              <button class="btn" id="next">Next</button>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <footer class="container pt-4">
-      <div class="muted small">
-        Astuce: vous pouvez passer un autre dossier via <span class="mono">?base=mon_dossier</span> (il doit contenir <span class="mono">candidates.json</span> et un dossier <span class="mono">cutouts/</span>).
-      </div>
-    </footer>
-  </main>
+      <section id="tab-details" class="tab" style="display:none;">
+        <div class="split">
+          <div class="left">
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;">
+                <div>
+                  <div style="font-size:16px;font-weight:700;" id="selTitle">Sélectionnez un candidat</div>
+                  <div class="muted" id="selMeta">Cliquez une ligne dans la table.</div>
+                </div>
+                <div class="toolbar">
+                  <button class="btn" id="btnCopyId">Copier ID</button>
+                  <button class="btn" id="btnOpenViz">Ouvrir viz3d</button>
+                </div>
+              </div>
+
+              <div class="grid3" id="cutouts" style="margin-top:12px;"></div>
+            </div>
+          </div>
+
+          <div class="right">
+            <div class="card">
+              <div style="font-size:15px;font-weight:700;margin-bottom:8px;">Annotation</div>
+              <div class="small">Label</div>
+              <select id="labelSel">
+                <option value="">non défini</option>
+                <option value="real_anomaly">real_anomaly</option>
+                <option value="artefact">artefact</option>
+                <option value="known">known</option>
+                <option value="new_type">new_type</option>
+                <option value="unsure">unsure</option>
+              </select>
+
+              <div class="small" style="margin-top:10px;">Commentaire</div>
+              <textarea id="comment" placeholder="note courte"></textarea>
+
+              <div class="toolbar">
+                <button class="btn primary" id="btnSave">Sauver</button>
+                <button class="btn" id="btnClearOne">Effacer</button>
+              </div>
+
+              <div class="muted" id="saveStatus"></div>
+            </div>
+
+            <div class="card">
+              <div style="font-size:15px;font-weight:700;margin-bottom:8px;">Données brutes</div>
+              <pre id="rawJson">{}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-files" class="tab" style="display:none;">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;">
+            <div>
+              <div style="font-size:16px;font-weight:700;">Fichiers du rapport</div>
+              <div class="muted">Sélectionnez un fichier. HTML est rendu dans une iframe. Images et JSON sont prévisualisés.</div>
+            </div>
+            <div class="toolbar">
+              <button class="btn" id="btnReloadManifest">Recharger manifest</button>
+            </div>
+          </div>
+
+          <div class="fileList" id="fileList"></div>
+        </div>
+
+        <div class="card">
+          <div style="font-size:15px;font-weight:700;margin-bottom:8px;" id="fileTitle">Prévisualisation</div>
+          <div id="filePreview"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
 
 <script>
-  const LABELS = [
-    '',
-    'real_anomaly',
-    'artefact',
-    'known',
-    'new_type',
-    'unsure',
-  ];
+  function qs(name) {
+    const u = new URL(window.location.href);
+    return u.searchParams.get(name);
+  }
+  function basePath() {
+    const b = qs("base");
+    if (!b) return ".";
+    return b.replace(/\/+$/,"");
+  }
+  const BASE = basePath();
+  const LS_KEY = "astrooracle_labels::" + BASE;
 
-  function slug(s) {
-    return String(s ?? '').replace(/[^a-zA-Z0-9_-]+/g, '_');
+  function lsGet() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch { return {}; }
+  }
+  function lsSet(obj) {
+    localStorage.setItem(LS_KEY, JSON.stringify(obj));
   }
 
-  function storageKey(base) {
-    return `astrooracle_labels::${base}`;
-  }
-
-  function loadSaved(base) {
-    try {
-      const raw = localStorage.getItem(storageKey(base));
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  }
-
-  function saveSaved(base, obj) {
-    localStorage.setItem(storageKey(base), JSON.stringify(obj || {}));
-  }
-
-  function downloadText(filename, text, mime='text/plain') {
+  function dl(filename, text, mime="application/json") {
     const blob = new Blob([text], {type: mime});
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
-  function fmt(x, n=5) {
-    const v = Number(x);
-    if (!Number.isFinite(v)) return '';
-    return v.toFixed(n);
-  }
-
-  function guessCutoutPath(baseCutoutsDir, rec, survey) {
-    // Compatible with older candidates.json that only has surveys.
-    const cid = slug(rec.id);
-    const s = slug(survey);
-    return `${baseCutoutsDir}${cid}_${s}.png`;
-  }
-
-  async function fetchJson(path) {
-    const r = await fetch(path, {cache: 'no-store'});
-    if (!r.ok) throw new Error(`fetch failed: ${r.status}`);
+  async function fetchJSON(path) {
+    const r = await fetch(path, {cache:"no-store"});
+    if (!r.ok) throw new Error("HTTP " + r.status);
     return await r.json();
   }
-
-  function renderPlot(recs) {
-    const xs = recs.map(r => Number(r.ra));
-    const ys = recs.map(r => Number(r.dec));
-    const zs = recs.map(r => Number(r.score ?? r.anomaly_score));
-    const ids = recs.map(r => String(r.id));
-    const trace = {
-      type: 'scatter3d',
-      mode: 'markers',
-      x: xs,
-      y: ys,
-      z: zs,
-      text: ids,
-      customdata: recs.map(r => [String(r.id), Number(r.ra), Number(r.dec), Number(r.score ?? r.anomaly_score)]),
-      hovertemplate: 'ID: %{customdata[0]}<br>RA: %{customdata[1]:.5f}<br>Dec: %{customdata[2]:.5f}<br>Score: %{customdata[3]:.4f}<extra></extra>',
-      marker: {size: 3},
-    };
-    const layout = {
-      paper_bgcolor: 'rgba(0,0,0,0)',
-      plot_bgcolor: 'rgba(0,0,0,0)',
-      font: {color: '#e7ecff'},
-      margin: {l: 0, r: 0, t: 10, b: 0},
-      scene: {
-        xaxis: {title: 'RA (deg)'},
-        yaxis: {title: 'Dec (deg)'},
-        zaxis: {title: 'Score'},
-      },
-    };
-    Plotly.newPlot('plot', [trace], layout, {displayModeBar: true, responsive: true});
-
-    const plotDiv = document.getElementById('plot');
-    plotDiv.on('plotly_click', (ev) => {
-      const p = ev.points && ev.points[0];
-      if (!p || !p.customdata) return;
-      const cid = String(p.customdata[0]);
-      const rec = recs.find(r => String(r.id) === cid);
-      if (rec) select(rec);
-    });
+  async function fetchText(path) {
+    const r = await fetch(path, {cache:"no-store"});
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return await r.text();
   }
 
-  let BASE = '';
-  let DATA_PATH = 'candidates.json';
-  let CUTOUTS_DIR = 'cutouts/';
-  let RECS = [];
-  let SAVED = {};
-  let SELECTED_ID = null;
-
-  function select(rec) {
-    SELECTED_ID = String(rec.id);
-
-    document.querySelectorAll('#candTable tbody tr').forEach((tr) => {
-      tr.classList.toggle('table-active', tr.getAttribute('data-id') === SELECTED_ID);
+  function setActiveTab(tab) {
+    document.querySelectorAll(".nav button").forEach(b => {
+      b.classList.toggle("active", b.dataset.tab === tab);
     });
+    document.querySelectorAll(".tab").forEach(s => s.style.display = "none");
+    document.getElementById("tab-" + tab).style.display = "";
+  }
+  document.querySelectorAll(".nav button").forEach(b => {
+    b.addEventListener("click", () => setActiveTab(b.dataset.tab));
+  });
 
-    const meta = document.getElementById('selectedMeta');
-    meta.innerHTML = `
-      <div class="small">
-        <div>ID: <span class="mono">${rec.id}</span></div>
-        <div>Score: <span class="mono">${fmt(rec.score ?? rec.anomaly_score, 4)}</span></div>
-        <div>RA: <span class="mono">${fmt(rec.ra, 5)}</span> Dec: <span class="mono">${fmt(rec.dec, 5)}</span></div>
-      </div>
-    `;
+  let MANIFEST = null;
+  let CANDS = [];
+  let FILTERED = [];
+  let PAGE = 0;
+  let PAGE_SIZE = 50;
+  let SELECTED = null;
 
-    const commentBox = document.getElementById('commentBox');
-    commentBox.value = (SAVED[SELECTED_ID] && SAVED[SELECTED_ID].comment) ? SAVED[SELECTED_ID].comment : '';
-    commentBox.oninput = () => {
-      SAVED[SELECTED_ID] = SAVED[SELECTED_ID] || {label: ''};
-      SAVED[SELECTED_ID].comment = commentBox.value;
-      saveSaved(BASE, SAVED);
-    };
+  function pathJoin(a,b){ return a.replace(/\/+$/,"") + "/" + b.replace(/^\/+/, ""); }
 
-    const box = document.getElementById('cutouts');
-    box.innerHTML = '';
+  function pill(id, text) { document.getElementById(id).textContent = text; }
 
-    const cutMap = rec.cutouts || null;
-    const surveys = rec.surveys || (cutMap ? Object.keys(cutMap) : []);
+  function scoreColor(s) {
+    const x = Math.max(0, Math.min(1, Number(s)));
+    const v = Math.floor(80 + x * 175);
+    return "rgb(" + v + "," + v + "," + 255 + ")";
+  }
 
-    if (!surveys || surveys.length === 0) {
-      box.innerHTML = '<div class="muted small">Aucun cutout listé.</div>';
-      return;
+  function drawSky() {
+    const canvas = document.getElementById("skyCanvas");
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.max(320, Math.floor(rect.width * devicePixelRatio));
+    canvas.height = Math.max(240, Math.floor(rect.height * devicePixelRatio));
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    if (!CANDS.length) return;
+
+    const ra = CANDS.map(c => Number(c.ra));
+    const de = CANDS.map(c => Number(c.dec));
+    const sc = CANDS.map(c => Number(c.score));
+
+    const raMin = Math.min(...ra), raMax = Math.max(...ra);
+    const deMin = Math.min(...de), deMax = Math.max(...de);
+
+    function xmap(v){ return (v - raMin) / (raMax - raMin + 1e-12) * (canvas.width - 20) + 10; }
+    function ymap(v){ return (1 - (v - deMin) / (deMax - deMin + 1e-12)) * (canvas.height - 20) + 10; }
+
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    for (let i=0;i<CANDS.length;i++){
+      const x = xmap(ra[i]);
+      const y = ymap(de[i]);
+      ctx.beginPath();
+      const r = 1.1 + 2.2 * (sc[i] || 0);
+      ctx.fillStyle = scoreColor(sc[i] || 0);
+      ctx.globalAlpha = 0.65;
+      ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fill();
     }
+    ctx.globalAlpha = 1.0;
+  }
 
-    for (const s of surveys) {
-      const col = document.createElement('div');
-      col.className = 'col-6';
-      const src = cutMap && cutMap[s] ? (BASE ? `${BASE}/${cutMap[s]}` : cutMap[s]) : (BASE ? `${BASE}/${guessCutoutPath(CUTOUTS_DIR, rec, s)}` : guessCutoutPath(CUTOUTS_DIR, rec, s));
-      col.innerHTML = `
-        <div class="small muted mb-1">${s}</div>
-        <img class="cutout-img" src="${src}" alt="${s}" onerror="this.style.opacity=0.35;" />
-      `;
-      box.appendChild(col);
+  function drawHist() {
+    const canvas = document.getElementById("histCanvas");
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.max(320, Math.floor(rect.width * devicePixelRatio));
+    canvas.height = Math.max(240, Math.floor(rect.height * devicePixelRatio));
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    if (!CANDS.length) return;
+
+    const scores = CANDS.map(c => Number(c.score)).filter(v => Number.isFinite(v));
+    const bins = 20;
+    const counts = new Array(bins).fill(0);
+    for (const s of scores){
+      const idx = Math.min(bins-1, Math.max(0, Math.floor(s * bins)));
+      counts[idx] += 1;
+    }
+    const maxC = Math.max(...counts, 1);
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    const w = (canvas.width - 20) / bins;
+    for (let i=0;i<bins;i++){
+      const h = (canvas.height - 20) * (counts[i] / maxC);
+      ctx.fillStyle = "rgba(146,163,255,0.85)";
+      ctx.fillRect(10 + i*w, canvas.height - 10 - h, w - 2, h);
     }
   }
 
-  function renderTable() {
-    const tbody = document.querySelector('#candTable tbody');
-    tbody.innerHTML = '';
+  function computeStats(){
+    const n = CANDS.length;
+    const top = n ? Math.max(...CANDS.map(c => Number(c.score))) : NaN;
+    const surveys = MANIFEST?.surveys || [];
+    document.getElementById("kpiN").textContent = String(n);
+    document.getElementById("kpiTop").textContent = Number.isFinite(top) ? top.toFixed(4) : "-";
+    document.getElementById("kpiSurveys").textContent = surveys.length ? surveys.join(", ") : "-";
 
-    for (const rec of RECS) {
-      const id = String(rec.id);
-      const tr = document.createElement('tr');
-      tr.className = 'clickable-row';
-      tr.setAttribute('data-id', id);
+    pill("pillCandidates", "candidats: " + n);
+    pill("pillCutouts", "cutouts: " + (MANIFEST?.cutouts_count ?? "-"));
+    pill("pillBase", "base: " + BASE);
 
-      const saved = SAVED[id] || {};
-      const label = saved.label || '';
+    const created = MANIFEST?.created_at || "";
+    const mode = (MANIFEST?.offline === true) ? "offline" : "online";
+    const extra = (MANIFEST?.note || "");
+    const line = "Créé: " + (created || "n/a") + " | mode: " + mode + (extra ? " | " + extra : "");
+    document.getElementById("metaLine").textContent = line;
 
+    const vizHref = pathJoin(BASE, MANIFEST?.viz3d_globe || "viz3d_globe.html");
+    const a = document.getElementById("btnViz3D");
+    a.href = vizHref;
+  }
+
+  function getLabel(id){
+    const m = lsGet();
+    return m[id]?.label || "";
+  }
+  function getComment(id){
+    const m = lsGet();
+    return m[id]?.comment || "";
+  }
+  function setAnno(id, label, comment){
+    const m = lsGet();
+    m[id] = {label: label || "", comment: comment || ""};
+    lsSet(m);
+  }
+  function clearAnno(id){
+    const m = lsGet();
+    delete m[id];
+    lsSet(m);
+  }
+
+  function applyFilters(){
+    const q = (document.getElementById("q").value || "").trim().toLowerCase();
+    const minScore = Number(document.getElementById("minScore").value || "0");
+    const lf = document.getElementById("labelFilter").value || "";
+    PAGE_SIZE = Number(document.getElementById("pageSize").value || "50");
+    PAGE = 0;
+
+    FILTERED = CANDS.filter(c => {
+      const id = String(c.id || "");
+      const lab = getLabel(id);
+      if (Number(c.score) < minScore) return false;
+      if (lf && lab !== lf) return false;
+      if (q){
+        if (!(id.toLowerCase().includes(q) || lab.toLowerCase().includes(q))) return false;
+      }
+      return true;
+    });
+
+    renderTable();
+  }
+
+  function renderTable(){
+    const tbody = document.getElementById("tbl");
+    tbody.innerHTML = "";
+
+    const start = PAGE * PAGE_SIZE;
+    const end = Math.min(FILTERED.length, start + PAGE_SIZE);
+    for (let i=start;i<end;i++){
+      const c = FILTERED[i];
+      const tr = document.createElement("tr");
+      tr.dataset.id = c.id;
+      if (SELECTED && SELECTED.id === c.id) tr.classList.add("sel");
       tr.innerHTML = `
-        <td class="mono">${id}</td>
-        <td class="text-end mono">${fmt(rec.score ?? rec.anomaly_score, 4)}</td>
-        <td class="text-end mono">${fmt(rec.ra, 5)}</td>
-        <td class="text-end mono">${fmt(rec.dec, 5)}</td>
-        <td>
-          <select class="form-select form-select-sm" data-id="${id}">
-            ${LABELS.map(v => `<option value="${v}" ${v===label ? 'selected' : ''}>${v || '(none)'}</option>`).join('')}
-          </select>
-        </td>
+        <td>${c.id}</td>
+        <td>${Number(c.score).toFixed(4)}</td>
+        <td>${Number(c.ra).toFixed(5)}</td>
+        <td>${Number(c.dec).toFixed(5)}</td>
+        <td>${getLabel(c.id) || ""}</td>
       `;
-
-      tr.addEventListener('click', (ev) => {
-        // Avoid selecting when clicking the select itself.
-        if (ev.target && ev.target.tagName && ev.target.tagName.toLowerCase() === 'select') return;
-        select(rec);
-      });
-
+      tr.addEventListener("click", () => selectCandidate(c.id));
       tbody.appendChild(tr);
     }
+    document.getElementById("pageInfo").textContent = `page ${PAGE+1} | ${FILTERED.length} candidats`;
+  }
 
-    document.querySelectorAll('#candTable select').forEach((sel) => {
-      sel.addEventListener('change', () => {
-        const id = String(sel.getAttribute('data-id'));
-        SAVED[id] = SAVED[id] || {comment: ''};
-        SAVED[id].label = sel.value;
-        saveSaved(BASE, SAVED);
-      });
+  function renderCutouts(c){
+    const grid = document.getElementById("cutouts");
+    grid.innerHTML = "";
+    const cut = c.cutouts || {};
+    const surveys = c.surveys || [];
+    if (!surveys.length){
+      grid.innerHTML = `<div class="muted">Aucun cutout.</div>`;
+      return;
+    }
+    for (const s of surveys){
+      const p = cut[String(s)];
+      const div = document.createElement("div");
+      div.innerHTML = `<div class="small" style="margin-bottom:4px;">${String(s)}</div><img class="img" src="${pathJoin(BASE,p)}" alt="${String(s)}"/>`;
+      grid.appendChild(div);
+    }
+  }
+
+  function selectCandidate(id){
+    const c = CANDS.find(x => x.id === id);
+    if (!c) return;
+    SELECTED = c;
+
+    document.getElementById("selTitle").textContent = String(c.id);
+    document.getElementById("selMeta").textContent = `score=${Number(c.score).toFixed(4)} | RA=${Number(c.ra).toFixed(5)} Dec=${Number(c.dec).toFixed(5)}`;
+
+    document.getElementById("labelSel").value = getLabel(id);
+    document.getElementById("comment").value = getComment(id);
+    document.getElementById("rawJson").textContent = JSON.stringify(c, null, 2);
+
+    renderCutouts(c);
+    renderTable();
+
+    setActiveTab("details");
+  }
+
+  function exportJSON(){
+    const m = lsGet();
+    const rows = Object.entries(m).map(([id,v]) => ({id, label: v.label || "", comment: v.comment || ""}));
+    dl("annotations.json", JSON.stringify({base: BASE, rows}, null, 2));
+  }
+
+  function exportCSV(){
+    const m = lsGet();
+    const rows = Object.entries(m).map(([id,v]) => {
+      const c = CANDS.find(x => x.id === id);
+      const ra = c ? c.ra : "";
+      const dec = c ? c.dec : "";
+      const score = c ? c.score : "";
+      return [id, ra, dec, score, v.label || "", (v.comment || "").replaceAll("\n"," ")];
+    });
+    const header = ["id","ra","dec","score","label","comment"];
+    const csv = [header.join(","), ...rows.map(r => r.map(x => `"${String(x).replaceAll('"','""')}"`).join(","))].join("\n");
+    dl("annotations.csv", csv, "text/csv");
+  }
+
+  function clearAll(){
+    localStorage.removeItem(LS_KEY);
+    applyFilters();
+    if (SELECTED) selectCandidate(SELECTED.id);
+  }
+
+  function saveOne(){
+    if (!SELECTED) return;
+    const label = document.getElementById("labelSel").value;
+    const comment = document.getElementById("comment").value;
+    setAnno(SELECTED.id, label, comment);
+    document.getElementById("saveStatus").textContent = "OK";
+    applyFilters();
+  }
+
+  function clearOne(){
+    if (!SELECTED) return;
+    clearAnno(SELECTED.id);
+    document.getElementById("labelSel").value = "";
+    document.getElementById("comment").value = "";
+    document.getElementById("saveStatus").textContent = "effacé";
+    applyFilters();
+  }
+
+  function buildFileList(files){
+    const list = document.getElementById("fileList");
+    list.innerHTML = "";
+    for (const f of files){
+      const item = document.createElement("div");
+      item.className = "fileItem";
+      item.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <div>${f.title || f.path}</div>
+          <div class="small">${f.path}</div>
+        </div>
+        <div class="tag">${f.type || "file"}</div>
+      `;
+      item.addEventListener("click", () => previewFile(f));
+      list.appendChild(item);
+    }
+  }
+
+  async function previewFile(f){
+    const prev = document.getElementById("filePreview");
+    const title = document.getElementById("fileTitle");
+    title.textContent = f.title || f.path;
+    prev.innerHTML = "";
+    const p = pathJoin(BASE, f.path);
+
+    try{
+      if (f.type === "html"){
+        const iframe = document.createElement("iframe");
+        iframe.src = p;
+        iframe.style.width = "100%";
+        iframe.style.height = "720px";
+        iframe.style.border = "1px solid rgba(255,255,255,0.10)";
+        iframe.style.borderRadius = "12px";
+        prev.appendChild(iframe);
+        return;
+      }
+      if (f.type === "image"){
+        const img = document.createElement("img");
+        img.className = "img";
+        img.src = p;
+        prev.appendChild(img);
+        return;
+      }
+      if (f.type === "json"){
+        const t = await fetchText(p);
+        let obj = null;
+        try { obj = JSON.parse(t); } catch { obj = t; }
+        const pre = document.createElement("pre");
+        pre.textContent = (typeof obj === "string") ? obj : JSON.stringify(obj, null, 2);
+        prev.appendChild(pre);
+        return;
+      }
+      if (f.type === "csv"){
+        const t = await fetchText(p);
+        const pre = document.createElement("pre");
+        pre.textContent = t.split(/\r?\n/).slice(0, 200).join("\n");
+        prev.appendChild(pre);
+        return;
+      }
+      const t = await fetchText(p);
+      const pre = document.createElement("pre");
+      pre.textContent = t.slice(0, 20000);
+      prev.appendChild(pre);
+    } catch(e){
+      const pre = document.createElement("pre");
+      pre.textContent = "Erreur de chargement: " + String(e);
+      prev.appendChild(pre);
+    }
+  }
+
+  async function loadManifest(){
+    const fallback = {
+      created_at: "",
+      offline: false,
+      surveys: [],
+      cutouts_count: null,
+      viz3d_globe: "viz3d_globe.html",
+      files: [
+        {path:"index.html", type:"html", title:"Index (rapport)"},
+        {path:"candidates.json", type:"json", title:"Candidates JSON"},
+        {path:"candidates.csv", type:"csv", title:"Candidates CSV"},
+        {path:"report_meta.json", type:"json", title:"Report meta"},
+        {path:"viz3d_globe.html", type:"html", title:"Viz3D globe"}
+      ]
+    };
+    try{
+      MANIFEST = await fetchJSON(pathJoin(BASE, "manifest.json"));
+    } catch {
+      MANIFEST = fallback;
+    }
+    const files = (MANIFEST.files || fallback.files).map(f => {
+      const ext = (f.path.split(".").pop() || "").toLowerCase();
+      if (!f.type){
+        if (ext === "html") f.type = "html";
+        else if (ext === "json") f.type = "json";
+        else if (ext === "csv") f.type = "csv";
+        else if (["png","jpg","jpeg","webp","gif"].includes(ext)) f.type = "image";
+        else f.type = "file";
+      }
+      return f;
+    });
+    MANIFEST.files = files;
+    buildFileList(files);
+  }
+
+  async function loadCandidates(){
+    const data = await fetchJSON(pathJoin(BASE, "candidates.json"));
+    CANDS = (data || []).map(c => ({
+      id: String(c.id),
+      ra: Number(c.ra),
+      dec: Number(c.dec),
+      score: Number(c.score),
+      surveys: c.surveys || [],
+      cutouts: c.cutouts || {}
+    }));
+    FILTERED = CANDS.slice();
+  }
+
+  function wire(){
+    document.getElementById("btnApply").addEventListener("click", applyFilters);
+    document.getElementById("prev").addEventListener("click", () => { PAGE = Math.max(0, PAGE-1); renderTable(); });
+    document.getElementById("next").addEventListener("click", () => {
+      const maxPage = Math.max(0, Math.ceil(FILTERED.length / PAGE_SIZE) - 1);
+      PAGE = Math.min(maxPage, PAGE+1);
+      renderTable();
     });
 
-    if (RECS.length > 0) select(RECS[0]);
+    document.getElementById("btnExportJSON").addEventListener("click", exportJSON);
+    document.getElementById("btnExportCSV").addEventListener("click", exportCSV);
+    document.getElementById("btnClear").addEventListener("click", clearAll);
+
+    document.getElementById("btnSave").addEventListener("click", saveOne);
+    document.getElementById("btnClearOne").addEventListener("click", clearOne);
+    document.getElementById("btnCopyId").addEventListener("click", () => {
+      if (!SELECTED) return;
+      navigator.clipboard.writeText(String(SELECTED.id));
+    });
+    document.getElementById("btnOpenViz").addEventListener("click", () => {
+      window.open(pathJoin(BASE, MANIFEST?.viz3d_globe || "viz3d_globe.html"), "_blank");
+    });
+
+    document.getElementById("btnRefreshPlots").addEventListener("click", () => {
+      drawSky();
+      drawHist();
+    });
+
+    document.getElementById("btnReloadManifest").addEventListener("click", async () => {
+      await loadManifest();
+    });
   }
 
-  function exportJson() {
-    const out = [];
-    for (const rec of RECS) {
-      const id = String(rec.id);
-      const s = SAVED[id] || {};
-      if (!s.label && !s.comment) continue;
-      out.push({
-        id: id,
-        ra: Number(rec.ra),
-        dec: Number(rec.dec),
-        anomaly_score: Number(rec.score ?? rec.anomaly_score),
-        label: s.label || '',
-        comment: s.comment || '',
-      });
+  async function main(){
+    wire();
+    await loadManifest();
+    try{
+      await loadCandidates();
+      computeStats();
+      applyFilters();
+      drawSky();
+      drawHist();
+    } catch (e){
+      document.getElementById("metaLine").innerHTML = `<span class="warn">Erreur: candidates.json non chargé.</span> Détail: ${String(e)}`;
+      pill("pillCandidates", "candidats: 0");
+      pill("pillCutouts", "cutouts: -");
     }
-    downloadText('annotations.json', JSON.stringify(out, null, 2), 'application/json');
   }
 
-  function exportCsv() {
-    const rows = ['id,ra,dec,anomaly_score,label,comment'];
-    for (const rec of RECS) {
-      const id = String(rec.id);
-      const s = SAVED[id] || {};
-      if (!s.label && !s.comment) continue;
-      const comment = String(s.comment || '').replace(/"/g, '""');
-      rows.push(`${id},${Number(rec.ra)},${Number(rec.dec)},${Number(rec.score ?? rec.anomaly_score)},${s.label || ''},"${comment}"`);
-    }
-    downloadText('annotations.csv', rows.join('\n'), 'text/csv');
-  }
-
-  function clearSaved() {
-    SAVED = {};
-    saveSaved(BASE, SAVED);
-    renderTable();
-  }
-
-  async function init() {
-    const params = new URLSearchParams(window.location.search);
-    BASE = (params.get('base') || '').trim();
-
-    DATA_PATH = BASE ? `${BASE}/candidates.json` : 'candidates.json';
-    CUTOUTS_DIR = BASE ? `${BASE}/cutouts/` : 'cutouts/';
-
-    document.getElementById('dataPath').textContent = DATA_PATH;
-    document.getElementById('cutoutsPath').textContent = CUTOUTS_DIR;
-
-    SAVED = loadSaved(BASE);
-
-    // Hide viz3d link if file does not exist.
-    try {
-      const rr = await fetch(BASE ? `${BASE}/viz3d_globe.html` : 'viz3d_globe.html', {method: 'HEAD'});
-      if (!rr.ok) document.getElementById('linkViz3d').style.display = 'none';
-      else document.getElementById('linkViz3d').href = BASE ? `${BASE}/viz3d_globe.html` : 'viz3d_globe.html';
-    } catch {
-      document.getElementById('linkViz3d').style.display = 'none';
-    }
-
-    RECS = await fetchJson(DATA_PATH);
-    // Sort by score desc
-    RECS.sort((a,b) => Number(b.score ?? b.anomaly_score) - Number(a.score ?? a.anomaly_score));
-
-    document.getElementById('metaLine').textContent = `${RECS.length} candidats. Labels sauvegardés: ${Object.keys(SAVED).length}.`;
-
-    renderPlot(RECS);
-    renderTable();
-  }
-
-  document.getElementById('btnExportJson').addEventListener('click', exportJson);
-  document.getElementById('btnExportCsv').addEventListener('click', exportCsv);
-  document.getElementById('btnClear').addEventListener('click', clearSaved);
-  document.getElementById('btnPlot').addEventListener('click', () => renderPlot(RECS));
-
-  init().catch((e) => {
-    console.error(e);
-    document.getElementById('metaLine').textContent = `Erreur de chargement. Vérifiez candidates.json et cutouts/.`;
-  });
+  main();
 </script>
 </body>
 </html>
