@@ -1,58 +1,36 @@
-name: Real data smoke (offline coords)
+name: Real data smoke (offline)
 
 on:
   workflow_dispatch:
     inputs:
-      n_rows:
-        description: "Nombre de lignes a utiliser depuis le sample"
-        required: false
-        default: "2000"
-      n_query:
-        description: "Nombre de candidats a inclure dans le batch"
-        required: false
-        default: "40"
+      n:
+        description: "Rows sampled from real ECSV"
+        required: true
+        default: "500"
   schedule:
-    - cron: "0 4 * * 1"  # Mondays 04:00 UTC
-
-permissions:
-  contents: read
+    - cron: "41 2 * * 0"
 
 jobs:
-  real-data-offline:
+  real-offline:
     runs-on: ubuntu-latest
-    env:
-      MPLBACKEND: Agg
-      ASTROORACLE_OFFLINE: "1"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
-
       - name: Install
         run: |
           python -m pip install -U pip
-          pip install -e ".[dev,plotly,astro]"
-
-      - name: Build candidates.parquet from real sample (offline coords)
+          pip install -e ".[dev,api,plotly,graph]"
+      - name: Build candidates.parquet from real sample (pseudo RA/Dec)
         run: |
-          python tools/real_data/build_candidates_from_ecsv.py             --input test_data/real/vari_summary_sample.csv.gz             --output candidates_real.parquet             --coords pseudo             --max-rows "${{ inputs.n_rows }}"             --meta-json real_build_meta.json
-          ls -la candidates_real.parquet real_build_meta.json
-
-      - name: Generate batch HTML from real sample
-        run: |
-          rm -rf _ci_out/real_offline
           mkdir -p _ci_out/real_offline
-          astrooracle batch-html --candidates candidates_real.parquet --out-dir _ci_out/real_offline/batch_out --n-query "${{ inputs.n_query }}" --offline
-          astrooracle viz3d --input candidates_real.parquet --output _ci_out/real_offline/batch_out/viz3d_globe.html --mode globe --max-points 5000 --cdn
-          cp -v real_build_meta.json _ci_out/real_offline/
-
+          python tools/real_data/build_candidates_from_ecsv.py             --input test_data/real/galaxy_candidates_sample.csv.gz             --output _ci_out/real_offline/candidates.parquet             --mode pseudo             --n "${{ inputs.n }}"
+      - name: Generate batch HTML report
+        run: |
+          astrooracle batch-html --candidates _ci_out/real_offline/candidates.parquet --out-dir _ci_out/real_offline/batch --offline
       - name: Upload artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
-          name: real_data_offline_report
+          name: real-data-offline
           path: _ci_out/real_offline

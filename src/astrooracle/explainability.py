@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
+
 
 
 @dataclass(frozen=True)
@@ -16,6 +17,7 @@ class Explanation:
     top_features: List[Tuple[str, float]]
     prompt: str
     meta: Dict[str, Any]
+
 
 
 def _robust_z(x: np.ndarray, eps: float = 1e-12) -> np.ndarray:
@@ -36,9 +38,22 @@ def _collect_numeric_features(df: pd.DataFrame) -> List[str]:
         if pd.api.types.is_numeric_dtype(df[c]):
             cols.append(c)
     # Prefer known priors first.
-    priors = [c for c in ["anomaly_score", "mag", "snr", "ruwe", "rank_score", "uncertainty", "p_max"] if c in cols]
+    priors = [
+        c
+        for c in [
+            "anomaly_score",
+            "mag",
+            "snr",
+            "ruwe",
+            "rank_score",
+            "uncertainty",
+            "p_max",
+        ]
+        if c in cols
+    ]
     rest = [c for c in cols if c not in priors]
     return priors + rest
+
 
 
 def explain_candidate_zscores(
@@ -58,7 +73,6 @@ def explain_candidate_zscores(
 
     for c in feats:
         x = pd.to_numeric(df_all[c], errors="coerce").to_numpy(float)
-        z = _robust_z(x)
         val = float(pd.to_numeric(row.get(c, np.nan), errors="coerce"))
         # Find the index of this row value position by matching id.
         # We avoid relying on index alignment.
@@ -73,7 +87,12 @@ def explain_candidate_zscores(
     contribs = sorted(contribs, key=lambda t: abs(t[1]), reverse=True)[: int(top_k)]
 
     cid = str(row.get("id"))
-    score = float(pd.to_numeric(row.get(score_field, row.get("anomaly_score", 0.0)), errors="coerce"))
+    score = float(
+        pd.to_numeric(
+            row.get(score_field, row.get("anomaly_score", 0.0)),
+            errors="coerce",
+        )
+    )
 
     prompt = build_llm_prompt(row=row, top_features=contribs, score=score)
 
@@ -87,7 +106,14 @@ def explain_candidate_zscores(
     )
 
 
-def build_llm_prompt(*, row: pd.Series, top_features: List[Tuple[str, float]], score: float) -> str:
+
+
+def build_llm_prompt(
+    *,
+    row: pd.Series,
+    top_features: List[Tuple[str, float]],
+    score: float,
+) -> str:
     """Create a shareable prompt for an LLM, without calling any model."""
 
     ra = float(pd.to_numeric(row.get("ra", np.nan), errors="coerce"))
@@ -113,6 +139,7 @@ def build_llm_prompt(*, row: pd.Series, top_features: List[Tuple[str, float]], s
     return "\n".join(lines)
 
 
+
 def explain_top_n(
     ranked_df: pd.DataFrame,
     *,
@@ -127,7 +154,14 @@ def explain_top_n(
     out: List[Explanation] = []
     for _i in range(n):
         row = ranked_df.iloc[_i]
-        out.append(explain_candidate_zscores(ranked_df, row, score_field=score_field, top_k=top_k_features))
+        out.append(
+            explain_candidate_zscores(
+                ranked_df,
+                row,
+                score_field=score_field,
+                top_k=top_k_features,
+            )
+        )
     return out
 
 

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Dict
 
 import numpy as np
 import pandas as pd
 
 from .ml.features import build_feature_matrix
+
 
 
 @dataclass(frozen=True)
@@ -16,6 +17,7 @@ class HybridFusionResult:
     meta: Dict[str, float]
 
 
+
 def _normalize01(x: np.ndarray, eps: float = 1e-12) -> np.ndarray:
     x = np.asarray(x, dtype=float)
     lo = float(np.nanmin(x)) if x.size else 0.0
@@ -23,6 +25,7 @@ def _normalize01(x: np.ndarray, eps: float = 1e-12) -> np.ndarray:
     if not np.isfinite(lo) or not np.isfinite(hi) or hi - lo < eps:
         return np.zeros_like(x)
     return (x - lo) / (hi - lo + eps)
+
 
 
 def compute_hybrid_fused_scores(
@@ -48,8 +51,16 @@ def compute_hybrid_fused_scores(
     if df.empty:
         return HybridFusionResult(
             fused_score=np.array([], dtype=float),
-            components={"base": np.array([], dtype=float), "iforest": np.array([], dtype=float), "lof": np.array([], dtype=float)},
-            meta={"w_base": float(w_base), "w_iforest": float(w_iforest), "w_lof": float(w_lof)},
+            components={
+                "base": np.array([], dtype=float),
+                "iforest": np.array([], dtype=float),
+                "lof": np.array([], dtype=float),
+            },
+            meta={
+                "w_base": float(w_base),
+                "w_iforest": float(w_iforest),
+                "w_lof": float(w_lof),
+            },
         )
 
     base = pd.to_numeric(df.get("anomaly_score"), errors="coerce").to_numpy(float)
@@ -96,11 +107,22 @@ def compute_hybrid_fused_scores(
     return HybridFusionResult(
         fused_score=fused,
         components={"base": base, "iforest": if_s, "lof": lof_s},
-        meta={"w_base": float(w_base), "w_iforest": float(w_iforest), "w_lof": float(w_lof), "seed": float(seed)},
+        meta={
+            "w_base": float(w_base),
+            "w_iforest": float(w_iforest),
+            "w_lof": float(w_lof),
+            "seed": float(seed),
+        },
     )
 
 
-def apply_hybrid_mode(df: pd.DataFrame, *, overwrite_anomaly_score: bool = True) -> Tuple[pd.DataFrame, Dict[str, float]]:
+
+
+def apply_hybrid_mode(
+    df: pd.DataFrame,
+    *,
+    overwrite_anomaly_score: bool = True,
+) -> tuple[pd.DataFrame, dict[str, float]]:
     """Return a copy of df with an extra fused score and optionally override anomaly_score."""
 
     res = compute_hybrid_fused_scores(df)
@@ -108,5 +130,9 @@ def apply_hybrid_mode(df: pd.DataFrame, *, overwrite_anomaly_score: bool = True)
     out["hybrid_fused_score"] = res.fused_score
     if overwrite_anomaly_score:
         out["anomaly_score"] = res.fused_score
-    meta = {"hybrid_w_base": float(res.meta["w_base"]), "hybrid_w_iforest": float(res.meta["w_iforest"]), "hybrid_w_lof": float(res.meta["w_lof"])}
+    meta = {
+        "hybrid_w_base": float(res.meta["w_base"]),
+        "hybrid_w_iforest": float(res.meta["w_iforest"]),
+        "hybrid_w_lof": float(res.meta["w_lof"]),
+    }
     return out, meta

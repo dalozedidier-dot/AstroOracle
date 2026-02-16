@@ -2,10 +2,18 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Tuple
 
 import numpy as np
 import pandas as pd
+
+# Optional dependency: networkx. We keep the module importable without it.
+try:
+    import networkx as nx  # type: ignore
+except Exception:  # pragma: no cover
+    nx = None  # type: ignore
+
+
 
 
 @dataclass(frozen=True)
@@ -16,6 +24,7 @@ class GraphAnomalyResult:
     node_metrics: pd.DataFrame
     edge_bridges: pd.DataFrame
     meta: Dict[str, float]
+
 
 
 def _radec_to_xyz(ra_deg: np.ndarray, dec_deg: np.ndarray) -> np.ndarray:
@@ -31,6 +40,7 @@ def _great_circle_distance_rad(xyz_a: np.ndarray, xyz_b: np.ndarray) -> np.ndarr
     # angle between unit vectors.
     dot = np.clip((xyz_a * xyz_b).sum(axis=1), -1.0, 1.0)
     return np.arccos(dot)
+
 
 
 def build_knn_graph(
@@ -81,7 +91,12 @@ def build_knn_graph(
 
     G = nx.Graph()
     for i, row in d.iterrows():
-        G.add_node(str(row["id"]), ra=float(row["ra"]), dec=float(row["dec"]), anomaly_score=float(row["anomaly_score"]))
+        G.add_node(
+            str(row["id"]),
+            ra=float(row["ra"]),
+            dec=float(row["dec"]),
+            anomaly_score=float(row["anomaly_score"]),
+        )
 
     for i in range(idx.shape[0]):
         src = str(d.loc[i, "id"])
@@ -104,6 +119,8 @@ def build_knn_graph(
     return G, d
 
 
+
+
 def detect_communities(G: "nx.Graph") -> Dict[str, int]:
     """Community assignment (Louvain if available, else greedy modularity)."""
 
@@ -122,12 +139,18 @@ def detect_communities(G: "nx.Graph") -> Dict[str, int]:
         pass
 
     # Greedy modularity (networkx)
-    comms = list(nx.algorithms.community.greedy_modularity_communities(G, weight="weight"))
+    comms = list(
+        nx.algorithms.community.greedy_modularity_communities(
+            G, weight="weight"
+        )
+    )
     out: Dict[str, int] = {}
     for i, cset in enumerate(comms):
         for node in cset:
             out[str(node)] = int(i)
     return out
+
+
 
 
 def graph_anomaly(
@@ -180,11 +203,22 @@ def graph_anomaly(
     edge_rows = []
     for (u, v), score in ebet.items():
         w = float(G.edges[u, v].get("weight", math.nan))
-        edge_rows.append({"u": str(u), "v": str(v), "edge_betweenness": float(score), "distance_rad": w})
+        edge_rows.append(
+            {
+                "u": str(u),
+                "v": str(v),
+                "edge_betweenness": float(score),
+                "distance_rad": w,
+            }
+        )
 
     edge_bridges = pd.DataFrame(edge_rows)
     if not edge_bridges.empty:
-        edge_bridges = edge_bridges.sort_values("edge_betweenness", ascending=False).head(int(bridges_top)).reset_index(drop=True)
+        edge_bridges = (
+            edge_bridges.sort_values("edge_betweenness", ascending=False)
+            .head(int(bridges_top))
+            .reset_index(drop=True)
+        )
 
     return GraphAnomalyResult(
         n_nodes=int(G.number_of_nodes()),
@@ -192,8 +226,14 @@ def graph_anomaly(
         communities=comm,
         node_metrics=node_metrics,
         edge_bridges=edge_bridges,
-        meta={"k": float(k), "max_nodes": float(max_nodes), "bridges_top": float(bridges_top)},
+        meta={
+            "k": float(k),
+            "max_nodes": float(max_nodes),
+            "bridges_top": float(bridges_top),
+        },
     )
+
+
 
 
 def plot_graph_context(
@@ -207,7 +247,6 @@ def plot_graph_context(
 
     try:
         import plotly.express as px
-        import plotly.graph_objects as go
     except Exception as e:  # pragma: no cover
         raise RuntimeError("Plotly not installed") from e
 
@@ -217,14 +256,22 @@ def plot_graph_context(
 
     d = df.copy()
     d["id"] = d["id"].astype(str)
-    d = d.merge(res.node_metrics[["id", "community", "betweenness"]], on="id", how="left")
+    d = d.merge(
+        res.node_metrics[["id", "community", "betweenness"]],
+        on="id",
+        how="left",
+    )
 
-    d['_node_size'] = np.clip(d['betweenness'].fillna(0.0).to_numpy(float) * 50.0 + 3.0, 3.0, 25.0)
+    d["_node_size"] = np.clip(
+        d["betweenness"].fillna(0.0).to_numpy(float) * 50.0 + 3.0,
+        3.0,
+        25.0,
+    )
 
     fig = px.scatter(
         d,
-        x='ra',
-        y='dec',
+        x="ra",
+        y="dec",
         color='community',
         size='_node_size',
         hover_data=['id', 'anomaly_score', 'community', 'betweenness'],
