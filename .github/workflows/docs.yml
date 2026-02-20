@@ -59,7 +59,7 @@ jobs:
             cp -R doc/_build/html _ci_out/docs/html
           fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: docs-html
           path: _ci_out/docs
