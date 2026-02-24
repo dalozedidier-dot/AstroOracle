@@ -14,8 +14,10 @@ jobs:
   real-offline:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install
@@ -30,7 +32,7 @@ jobs:
         run: |
           astrooracle batch-html --candidates _ci_out/real_offline/candidates.parquet --out-dir _ci_out/real_offline/batch --offline
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: real-data-offline
           path: _ci_out/real_offline
