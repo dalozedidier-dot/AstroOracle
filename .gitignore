@@ -1,43 +1,38 @@
-.venv/
-__pycache__/
-*.pyc
-dist/
-build/
-*.egg-info/
-.ipynb_checkpoints/
-cutouts/
-logs/
-annotations.csv
-oracle_log.jsonl
-best_model.pkl
-*.parquet
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
+# Virtual environments
 .venv/
 venv/
 ENV/
 .env
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.ipynb_checkpoints/
+
 # Packaging
 build/
 dist/
-*.egg-info/
 
-# Test/coverage
+# Test / coverage / linters
 .coverage
-htmlcov/
 .coverage.*
+htmlcov/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 
-# Notebooks
-.ipynb_checkpoints/
-
 # Runtime outputs
+cutouts/
+logs/
 _ci_out/
+annotations.csv
+oracle_log.jsonl
+best_model.pkl
 *.parquet
 *.pkl
-oracle_log.jsonl
+
+# Scratch / local patch experiments (do not commit)
+/*.patch
+PATCH_NOTES_*.txt

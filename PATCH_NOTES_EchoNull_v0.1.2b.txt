@@ -1,4 +1,0 @@
-Fix: mypy failing on src/null_trace.py due to unused 'type: ignore'.
-Change: remove static import and use importlib to keep mypy clean.
-Files:
-- src/null_trace.py
